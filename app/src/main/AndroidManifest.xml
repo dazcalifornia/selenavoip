@@ -100,20 +100,20 @@
                 <!-- END CUSTOMS -->
 
                 <!-- VOIP -->
-                <action android:name="com.synapes.voip.REGISTRATION" />
-                <action android:name="com.synapes.voip.INCOMING_CALL" />
-                <action android:name="com.synapes.voip.CALL_STATE" />
-                <action android:name="com.synapes.voip.CALL_MEDIA_STATE" />
-                <action android:name="com.synapes.voip.OUTGOING_CALL" />
-                <action android:name="com.synapes.voip.STACK_STATUS" />
-                <action android:name="com.synapes.voip.CODEC_PRIORITIES" />
-                <action android:name="com.synapes.voip.CODEC_PRIORITIES_SET_STATUS" />
-                <action android:name="com.synapes.voip.MISSED_CALL" />
-                <action android:name="com.synapes.voip.VIDEO_SIZE" />
-                <action android:name="com.synapes.voip.CALL_STATS" />
-                <action android:name="com.synapes.voip.CALL_RECONNECTION_STATE" />
-                <action android:name="com.synapes.voip.SILENT_CALL_STATUS" />
-                <action android:name="com.synapes.voip.NOTIFY_TLS_VERIFY_STATUS_FAILED" />
+                <action android:name="com.synapes.selenvoip.REGISTRATION" />
+                <action android:name="com.synapes.selenvoip.INCOMING_CALL" />
+                <action android:name="com.synapes.selenvoip.CALL_STATE" />
+                <action android:name="com.synapes.selenvoip.CALL_MEDIA_STATE" />
+                <action android:name="com.synapes.selenvoip.OUTGOING_CALL" />
+                <action android:name="com.synapes.selenvoip.STACK_STATUS" />
+                <action android:name="com.synapes.selenvoip.CODEC_PRIORITIES" />
+                <action android:name="com.synapes.selenvoip.CODEC_PRIORITIES_SET_STATUS" />
+                <action android:name="com.synapes.selenvoip.MISSED_CALL" />
+                <action android:name="com.synapes.selenvoip.VIDEO_SIZE" />
+                <action android:name="com.synapes.selenvoip.CALL_STATS" />
+                <action android:name="com.synapes.selenvoip.CALL_RECONNECTION_STATE" />
+                <action android:name="com.synapes.selenvoip.SILENT_CALL_STATUS" />
+                <action android:name="com.synapes.selenvoip.NOTIFY_TLS_VERIFY_STATUS_FAILED" />
                 <!-- END VOIP -->
 
             </intent-filter>

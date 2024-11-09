@@ -57,6 +57,10 @@ class MainActivity : AppCompatActivity() {
                         Log.e(TAG, "MainActivity: No phone number provided for MAKE_CALL")
                     }
                 }
+                BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION) -> {
+                    Log.d(TAG, "MainActivity: Received: onRegistration")
+                }
+
             }
         }
     }
@@ -86,8 +90,12 @@ class MainActivity : AppCompatActivity() {
         val filter = IntentFilter().apply {
             addAction(BroadcastEventReceiver.ACTION_REGISTRATION_CHECK)
             addAction(BroadcastEventReceiver.ACTION_MAKE_CALL)
+            addAction(BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION))
         }
         LocalBroadcastManager.getInstance(this).registerReceiver(mainActivityReceiver, filter)
+
+        mainActivityReceiver.setReceiverContext(this)
+        mainActivityReceiver.register(this)
 
         requestPermissions()
     }

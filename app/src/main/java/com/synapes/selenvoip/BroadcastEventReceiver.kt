@@ -3,6 +3,8 @@ package com.synapes.selenvoip
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
@@ -10,6 +12,7 @@ open class BroadcastEventReceiver : BroadcastReceiver(), SipServiceConstants {
     private lateinit var receiverContext: Context
 
     fun setReceiverContext(context: Context) {
+        Log.d(TAG, "Setting receiver context to: $context")
         receiverContext = context
     }
 
@@ -47,6 +50,23 @@ open class BroadcastEventReceiver : BroadcastReceiver(), SipServiceConstants {
             BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION) -> handleRegistration(
                 intent
             )
+        }
+    }
+
+    open fun register(context: Context, receiverExported: Int = 4) { // 4 = RECEIVER_NOT_EXPORTED
+        Log.i(TAG, "***** Registering receiver: $this from context: $context")
+        val intentFilter = IntentFilter().apply {
+            BroadcastEventEmitter.BroadcastAction.entries.forEach { action ->
+                Log.d(TAG, "Adding action: ${BroadcastEventEmitter.getAction(action)}")
+                addAction(BroadcastEventEmitter.getAction(action))
+            }
+        }
+
+        // Actually register the receiver
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(this, intentFilter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(this, intentFilter)
         }
     }
 
