@@ -44,17 +44,19 @@ class MainActivity : AppCompatActivity() {
     private lateinit var networkCallback: ConnectivityManager.NetworkCallback
     private lateinit var telephonyCallback: TelephonyCallback
 
-    private val mainActivityReceiver = object : BroadcastEventReceiver() {
+    private val localBroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            when (intent.action) {
-                ACTION_REGISTRATION_CHECK -> {
+            val originalAction = intent.getStringExtra(BroadcastEventReceiver.EXTRA_ORIGINAL_ACTION)
+            Log.d(TAG, "Received local broadcast. Original action: $originalAction")
+
+            when (originalAction) {
+                BroadcastEventReceiver.ACTION_REGISTRATION_CHECK -> {
                     Log.d(TAG, "MainActivity: Received REGISTRATION_CHECK broadcast")
-                    // Implement your registration check logic here
                 }
 
-                ACTION_MAKE_CALL -> {
+                BroadcastEventReceiver.ACTION_MAKE_CALL -> {
                     Log.d(TAG, "MainActivity: Received MAKE_CALL broadcast")
-                    val phoneNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER)
+                    val phoneNumber = intent.getStringExtra(BroadcastEventReceiver.EXTRA_PHONE_NUMBER)
                     if (phoneNumber != null) {
                         Log.d(TAG, "MainActivity: Making call to: $phoneNumber")
                         // Implement your make call logic here
@@ -62,15 +64,30 @@ class MainActivity : AppCompatActivity() {
                         Log.e(TAG, "MainActivity: No phone number provided for MAKE_CALL")
                     }
                 }
+
                 BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION) -> {
                     Log.d(TAG, "MainActivity: Received: onRegistration")
                 }
+
                 BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.INCOMING_CALL) -> {
-                    Log.d(TAG, "MainActivity: Received: Incoming call...")
+                    Log.d(TAG, "MainActivity: Received: Incoming call")
+                    val accountID = intent.getStringExtra(SipServiceConstants.PARAM_ACCOUNT_ID)
+                    val callID = intent.getIntExtra(SipServiceConstants.PARAM_CALL_ID, -1)
+                    val displayName = intent.getStringExtra(SipServiceConstants.PARAM_DISPLAY_NAME)
+                    val remoteUri = intent.getStringExtra(SipServiceConstants.PARAM_REMOTE_URI)
+                    val isVideo = intent.getBooleanExtra(SipServiceConstants.PARAM_IS_VIDEO, false)
+                    Log.d(TAG, "Account ID: $accountID, Call ID: $callID, Display Name: $displayName, Remote URI: $remoteUri, Is Video: $isVideo")
+//                    handleIncomingCall(intent)
+                    SipServiceCommand.acceptIncomingCall(this@MainActivity, accountID.toString(), callID, isVideo);
+
                 }
 
+                else -> {
+                    Log.d(TAG, "MainActivity: Unhandled broadcast: $originalAction")
+                }
             }
         }
+
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -95,16 +112,21 @@ class MainActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
 
         // Register the mainActivityReceiver to receive local broadcasts
-        val filter = IntentFilter().apply {
-            addAction(BroadcastEventReceiver.ACTION_REGISTRATION_CHECK)
-            addAction(BroadcastEventReceiver.ACTION_MAKE_CALL)
-            addAction(BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION))
-            addAction(BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.INCOMING_CALL))
-        }
-        LocalBroadcastManager.getInstance(this).registerReceiver(mainActivityReceiver, filter)
+//        val filter = IntentFilter().apply {
+//            addAction(BroadcastEventReceiver.ACTION_REGISTRATION_CHECK)
+//            addAction(BroadcastEventReceiver.ACTION_MAKE_CALL)
+//            addAction(BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION))
+//            addAction(BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.INCOMING_CALL))
+//        }
 
-        mainActivityReceiver.setReceiverContext(this)
-        mainActivityReceiver.register(this)
+        // Register the localBroadcastReceiver to receive local broadcasts
+        val filter = IntentFilter(BroadcastEventReceiver.LOCAL_BROADCAST_ACTION)
+        LocalBroadcastManager.getInstance(this).registerReceiver(localBroadcastReceiver, filter)
+
+//        LocalBroadcastManager.getInstance(this).registerReceiver(localBroadcastReceiver, filter)
+//
+//        localBroadcastReceiver.setReceiverContext(this)
+//        localBroadcastReceiver.register(this)
 
         requestPermissions()
     }
@@ -433,7 +455,7 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         // Unregister the broadcast receivers
         unregisterReceiver(systemBroadcastReceiver)
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(mainActivityReceiver)
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(localBroadcastReceiver)
         connectivityManager.unregisterNetworkCallback(networkCallback)
     }
 
