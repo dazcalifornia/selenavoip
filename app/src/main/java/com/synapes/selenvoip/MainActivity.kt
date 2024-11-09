@@ -65,6 +65,9 @@ class MainActivity : AppCompatActivity() {
                 BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION) -> {
                     Log.d(TAG, "MainActivity: Received: onRegistration")
                 }
+                BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.INCOMING_CALL) -> {
+                    Log.d(TAG, "MainActivity: Received: Incoming call...")
+                }
 
             }
         }
@@ -96,6 +99,7 @@ class MainActivity : AppCompatActivity() {
             addAction(BroadcastEventReceiver.ACTION_REGISTRATION_CHECK)
             addAction(BroadcastEventReceiver.ACTION_MAKE_CALL)
             addAction(BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION))
+            addAction(BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.INCOMING_CALL))
         }
         LocalBroadcastManager.getInstance(this).registerReceiver(mainActivityReceiver, filter)
 
