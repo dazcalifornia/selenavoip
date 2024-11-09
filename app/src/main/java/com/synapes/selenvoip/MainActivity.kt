@@ -9,6 +9,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -27,6 +28,10 @@ import com.synapes.selenvoip.databinding.ActivityMainBinding
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+
+    private var mAccount: SipAccountData? = null
+    private var mAccountId: String? = null
+    private var isRegistrationComplete = false
 
     private var lastLoggedSignalStrength: Int = -1
     private var lastLoggedTime: Long = 0
@@ -342,7 +347,54 @@ class MainActivity : AppCompatActivity() {
 
     private fun initializeApp() {
         Log.d(TAG, "App initialization complete. Start logging in...")
-//        autoLogin()
+        autoLogin()
+    }
+
+    private fun autoLogin() {
+        Log.d(TAG, "Attempting auto-login...")
+
+        val server = "synapes-pbx-poc-01.online"
+        val account = "911911"
+        val password = "911911"
+        val port = "5060"
+
+        if (server.isNotEmpty() && account.isNotEmpty() && password.isNotEmpty() && port.isNotEmpty()) {
+            mAccount = SipAccountData().apply {
+                host = server
+                realm = "*"
+                this.port = port.toInt()
+                username = account
+                this.password = password
+                transport = SipAccountTransport.UDP
+
+                // Ensure these fields are set correctly
+                setAuthenticationType(SipAccountData.AUTH_TYPE_DIGEST)
+                setRealm(server) // Use the server as the realm
+                setRegExpirationTimeout(300) // Set registration expiration (e.g., 300 seconds)
+            }
+
+            try {
+                val sipAccountData = mAccount!!
+                mAccountId = SipServiceCommand.setAccount(this, sipAccountData)
+                Log.d(TAG, "Auto-login initiated with account ID: $mAccountId")
+                Log.d(
+                    TAG,
+                    "**** Account Info: ${sipAccountData.getRegistrarUri()}, ${sipAccountData.getAuthCredInfo()}, ${sipAccountData.username}, ${sipAccountData.password}\n" +
+                            "**** SIP URI: ${sipAccountData.getIdUri()}\n" +
+                            "**** Proxy URI: ${sipAccountData.getProxyUri()}"
+                )
+                isRegistrationComplete = true
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Auto-login failed: ${e.message}")
+                Toast.makeText(this, "Auto-login failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Log.d(TAG, "Auto-login failed: Missing credentials")
+            Toast.makeText(this, "Auto-login failed: Missing credentials", Toast.LENGTH_SHORT)
+                .show()
+        }
+        Log.d(TAG, "Auto-login completed. Registration = $isRegistrationComplete")
     }
 
     override fun onStart() {
