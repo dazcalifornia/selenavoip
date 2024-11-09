@@ -28,6 +28,10 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
+    private var lastLoggedSignalStrength: Int = -1
+    private var lastLoggedTime: Long = 0
+    private val LOG_INTERVAL = 60000 // 1 minute
+
     private lateinit var systemBroadcastReceiver: BroadcastReceiver
     private lateinit var connectivityManager: ConnectivityManager
     private lateinit var telephonyManager: TelephonyManager
@@ -62,9 +66,9 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         // Initialize managers
-        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+        wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
 
         // Initialize the broadcast receiver
         initSystemBroadcastReceiver()
@@ -83,7 +87,27 @@ class MainActivity : AppCompatActivity() {
             addAction(BroadcastEventReceiver.ACTION_MAKE_CALL)
         }
         LocalBroadcastManager.getInstance(this).registerReceiver(mainActivityReceiver, filter)
+
+        requestPermissions()
     }
+
+    private fun requestPermissions() {
+        val permissionsToRequest = REQUIRED_PERMISSIONS.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }.toTypedArray()
+
+        if (permissionsToRequest.isNotEmpty()) {
+            ActivityCompat.requestPermissions(
+                this,
+                permissionsToRequest,
+                Config.PERMISSION_REQUEST_CODE
+            )
+        } else {
+            Log.i(TAG, "All permissions are already granted. Initializing app...")
+            initializeApp()
+        }
+    }
+
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onResume() {
@@ -161,7 +185,7 @@ class MainActivity : AppCompatActivity() {
                 telephonyCallback = object : TelephonyCallback(), TelephonyCallback.SignalStrengthsListener {
                     override fun onSignalStrengthsChanged(signalStrength: SignalStrength) {
                         val cellularStrength = signalStrength.level
-                        Log.d(TAG, "Cellular signal strength: $cellularStrength")
+                        logSignalStrengthIfNeeded(cellularStrength)
                     }
                 }
                 telephonyManager.registerTelephonyCallback(mainExecutor, telephonyCallback)
@@ -177,11 +201,21 @@ class MainActivity : AppCompatActivity() {
             telephonyManager.listen(object : PhoneStateListener() {
                 override fun onSignalStrengthsChanged(signalStrength: SignalStrength) {
                     val cellularStrength = signalStrength.level
-                    Log.d(TAG, "Cellular signal strength: $cellularStrength")
+                    logSignalStrengthIfNeeded(cellularStrength)
                 }
             }, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS)
         }
     }
+
+    private fun logSignalStrengthIfNeeded(cellularStrength: Int) {
+        val currentTime = System.currentTimeMillis()
+        if (cellularStrength != lastLoggedSignalStrength || currentTime - lastLoggedTime > LOG_INTERVAL) {
+            Log.d(TAG, "Cellular signal strength: $cellularStrength")
+            lastLoggedSignalStrength = cellularStrength
+            lastLoggedTime = currentTime
+        }
+    }
+
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -190,6 +224,17 @@ class MainActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when (requestCode) {
+            Config.PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                    Log.d(TAG, "All permissions granted")
+                    initializeApp()
+                } else {
+                    val deniedPermissions = permissions.filterIndexed { index, _ ->
+                        grantResults[index] == PackageManager.PERMISSION_DENIED
+                    }
+                    Log.d(TAG, "Denied permissions: $deniedPermissions")
+                }
+            }
             PERMISSION_REQUEST_READ_PHONE_STATE -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     registerSignalStrengthListener()
@@ -268,6 +313,38 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun initializeApp() {
+        Log.d(TAG, "App initialization complete. Start logging in...")
+//        autoLogin()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        Log.d(TAG, "onStart() called")
+        // Register the BroadcastReceiver to listen for custom broadcasts
+        val intentFilter = IntentFilter(BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION))
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+//            Log.d(
+//                TAG,
+//                "Android version TIRAMISU or higher, registering with ContextCompat.RECEIVER_EXPORTED...(For other app and system to receive broadcast)"
+//            )
+//            mReceiver.register(this, ContextCompat.RECEIVER_EXPORTED)
+//        } else {
+//            Log.d(
+//                TAG,
+//                "Android version below TIRAMISU, registering without ContextCompat.RECEIVER_EXPORTED..."
+//            )
+//            mReceiver.register(this)
+//        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Unregister the BroadcastReceiver to avoid memory leaks
+//        unregisterReceiver(mReceiver)
+        Log.d(TAG, "onStop() called")
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         // Unregister the broadcast receivers
@@ -279,5 +356,16 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "MainActivity"
         private const val PERMISSION_REQUEST_READ_PHONE_STATE = 1
+        private val REQUIRED_PERMISSIONS = arrayOf(
+            Manifest.permission.USE_SIP,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.WAKE_LOCK,
+            Manifest.permission.INTERNET,
+            Manifest.permission.ACCESS_NETWORK_STATE,
+            Manifest.permission.CAMERA,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.MODIFY_AUDIO_SETTINGS
+        )
     }
 }

@@ -6,7 +6,15 @@ import android.content.Intent
 import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
-open class BroadcastEventReceiver : BroadcastReceiver() {
+open class BroadcastEventReceiver : BroadcastReceiver(), SipServiceConstants {
+    private lateinit var receiverContext: Context
+
+    fun setReceiverContext(context: Context) {
+        receiverContext = context
+    }
+
+    open fun getReceiverContext(): Context = receiverContext
+
     override fun onReceive(context: Context, intent: Intent) {
         Log.d(TAG, "Received broadcast: ${intent.action}")
 
@@ -16,11 +24,14 @@ open class BroadcastEventReceiver : BroadcastReceiver() {
         }
         LocalBroadcastManager.getInstance(context).sendBroadcast(localIntent)
 
+        receiverContext = context
+
         when (intent.action) {
             ACTION_REGISTRATION_CHECK -> {
                 Log.d(TAG, "Received REGISTRATION_CHECK broadcast")
                 // Implement your registration check logic here
             }
+
             ACTION_MAKE_CALL -> {
                 Log.d(TAG, "Received MAKE_CALL broadcast")
                 val phoneNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER)
@@ -30,8 +41,27 @@ open class BroadcastEventReceiver : BroadcastReceiver() {
                 } else {
                     Log.e(TAG, "No phone number provided for MAKE_CALL")
                 }
+
             }
+
+            BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION) -> handleRegistration(
+                intent
+            )
         }
+    }
+
+    private fun handleRegistration(intent: Intent) {
+        Log.d(TAG, "Received: onRegistration")
+        val stateCode = intent.getIntExtra(SipServiceConstants.PARAM_REGISTRATION_CODE, -1)
+        val accountID = intent.getStringExtra(SipServiceConstants.PARAM_ACCOUNT_ID)
+        onRegistration(accountID, stateCode)
+    }
+
+    open fun onRegistration(accountID: String?, registrationStateCode: Int) {
+        Log.d(
+            TAG,
+            "Received: onRegistration - accountID: $accountID, registrationStateCode: $registrationStateCode"
+        )
     }
 
     companion object {

@@ -7,6 +7,65 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
+    <!-- FIXME: check if android 7.1 still needs these 2 -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="25" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="25" />
+    <uses-permission android:name="android.permission.USE_SIP" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Wakelock permission -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
+    <!-- FIXME: check if android 7.1 still needs these 2 -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="25" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="25" />
+    <uses-permission android:name="android.permission.USE_SIP" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <queries>
+        <!-- Your consumer app package id -->
+        <!-- Should be set in your app build.gradle file -->
+        <!-- e.g. manifestPlaceholders = [consumerAppId:"my.application.id"] -->
+        <package android:name="${consumerAppId}" />
+    </queries>
+
+    <!-- Wakelock permission -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <queries>
+        <!-- Your consumer app package id -->
+        <!-- Should be set in your app build.gradle file -->
+        <!-- e.g. manifestPlaceholders = [consumerAppId:"my.application.id"] -->
+        <package android:name="${consumerAppId}" />
+    </queries>
+
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -31,8 +90,32 @@
             android:name=".BroadcastEventReceiver"
             android:exported="true">
             <intent-filter>
+                <!-- SYSTEMS -->
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <!-- END SYSTEMS -->
+
+                <!-- CUSTOMS -->
                 <action android:name="com.synapes.selenvoip.REGISTRATION_CHECK" />
                 <action android:name="com.synapes.selenvoip.MAKE_CALL" />
+                <!-- END CUSTOMS -->
+
+                <!-- VOIP -->
+                <action android:name="com.synapes.voip.REGISTRATION" />
+                <action android:name="com.synapes.voip.INCOMING_CALL" />
+                <action android:name="com.synapes.voip.CALL_STATE" />
+                <action android:name="com.synapes.voip.CALL_MEDIA_STATE" />
+                <action android:name="com.synapes.voip.OUTGOING_CALL" />
+                <action android:name="com.synapes.voip.STACK_STATUS" />
+                <action android:name="com.synapes.voip.CODEC_PRIORITIES" />
+                <action android:name="com.synapes.voip.CODEC_PRIORITIES_SET_STATUS" />
+                <action android:name="com.synapes.voip.MISSED_CALL" />
+                <action android:name="com.synapes.voip.VIDEO_SIZE" />
+                <action android:name="com.synapes.voip.CALL_STATS" />
+                <action android:name="com.synapes.voip.CALL_RECONNECTION_STATE" />
+                <action android:name="com.synapes.voip.SILENT_CALL_STATUS" />
+                <action android:name="com.synapes.voip.NOTIFY_TLS_VERIFY_STATUS_FAILED" />
+                <!-- END VOIP -->
+
             </intent-filter>
         </receiver>
     </application>
