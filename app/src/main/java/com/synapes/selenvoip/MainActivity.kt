@@ -38,13 +38,13 @@ class MainActivity : AppCompatActivity() {
     private val mainActivityReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
-                CustomBroadcastReceiver.ACTION_REGISTRATION_CHECK -> {
+                BroadcastEventReceiver.ACTION_REGISTRATION_CHECK -> {
                     Log.d(TAG, "MainActivity: Received REGISTRATION_CHECK broadcast")
                     // Implement your registration check logic here
                 }
-                CustomBroadcastReceiver.ACTION_MAKE_CALL -> {
+                BroadcastEventReceiver.ACTION_MAKE_CALL -> {
                     Log.d(TAG, "MainActivity: Received MAKE_CALL broadcast")
-                    val phoneNumber = intent.getStringExtra(CustomBroadcastReceiver.EXTRA_PHONE_NUMBER)
+                    val phoneNumber = intent.getStringExtra(BroadcastEventReceiver.EXTRA_PHONE_NUMBER)
                     if (phoneNumber != null) {
                         Log.d(TAG, "MainActivity: Making call to: $phoneNumber")
                         // Implement your make call logic here
@@ -79,8 +79,8 @@ class MainActivity : AppCompatActivity() {
 
         // Register the mainActivityReceiver to receive local broadcasts
         val filter = IntentFilter().apply {
-            addAction(CustomBroadcastReceiver.ACTION_REGISTRATION_CHECK)
-            addAction(CustomBroadcastReceiver.ACTION_MAKE_CALL)
+            addAction(BroadcastEventReceiver.ACTION_REGISTRATION_CHECK)
+            addAction(BroadcastEventReceiver.ACTION_MAKE_CALL)
         }
         LocalBroadcastManager.getInstance(this).registerReceiver(mainActivityReceiver, filter)
     }

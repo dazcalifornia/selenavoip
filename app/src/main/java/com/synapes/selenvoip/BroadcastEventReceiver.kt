@@ -6,7 +6,7 @@ import android.content.Intent
 import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
-open class CustomBroadcastReceiver : BroadcastReceiver() {
+open class BroadcastEventReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         Log.d(TAG, "Received broadcast: ${intent.action}")
 

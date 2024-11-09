@@ -28,7 +28,7 @@
             </intent-filter>
         </activity>
         <receiver
-            android:name=".CustomBroadcastReceiver"
+            android:name=".BroadcastEventReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="com.synapes.selenvoip.REGISTRATION_CHECK" />
