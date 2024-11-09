@@ -39,16 +39,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var networkCallback: ConnectivityManager.NetworkCallback
     private lateinit var telephonyCallback: TelephonyCallback
 
-    private val mainActivityReceiver = object : BroadcastReceiver() {
+    private val mainActivityReceiver = object : BroadcastEventReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
-                BroadcastEventReceiver.ACTION_REGISTRATION_CHECK -> {
+                ACTION_REGISTRATION_CHECK -> {
                     Log.d(TAG, "MainActivity: Received REGISTRATION_CHECK broadcast")
                     // Implement your registration check logic here
                 }
-                BroadcastEventReceiver.ACTION_MAKE_CALL -> {
+
+                ACTION_MAKE_CALL -> {
                     Log.d(TAG, "MainActivity: Received MAKE_CALL broadcast")
-                    val phoneNumber = intent.getStringExtra(BroadcastEventReceiver.EXTRA_PHONE_NUMBER)
+                    val phoneNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER)
                     if (phoneNumber != null) {
                         Log.d(TAG, "MainActivity: Making call to: $phoneNumber")
                         // Implement your make call logic here
@@ -135,25 +136,34 @@ class MainActivity : AppCompatActivity() {
                     Intent.ACTION_BOOT_COMPLETED -> {
                         Log.d("SystemBroadcast", "Boot completed")
                     }
+
                     Intent.ACTION_POWER_CONNECTED -> {
                         Log.d("SystemBroadcast", "Power connected")
                     }
+
                     Intent.ACTION_POWER_DISCONNECTED -> {
                         Log.d("SystemBroadcast", "Power disconnected")
                     }
+
                     Intent.ACTION_BATTERY_LOW -> {
                         Log.d("SystemBroadcast", "Battery low")
                     }
+
                     Intent.ACTION_AIRPLANE_MODE_CHANGED -> {
                         val isAirplaneModeOn = intent.getBooleanExtra("state", false)
                         Log.d("SystemBroadcast", "Airplane mode changed: $isAirplaneModeOn")
                     }
+
                     WifiManager.WIFI_STATE_CHANGED_ACTION -> {
-                        when (intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, WifiManager.WIFI_STATE_UNKNOWN)) {
+                        when (intent.getIntExtra(
+                            WifiManager.EXTRA_WIFI_STATE,
+                            WifiManager.WIFI_STATE_UNKNOWN
+                        )) {
                             WifiManager.WIFI_STATE_ENABLED -> {
                                 Log.d("SystemBroadcast", "Wi-Fi enabled")
                                 updateWifiStrength()
                             }
+
                             WifiManager.WIFI_STATE_DISABLED -> {
                                 Log.d("SystemBroadcast", "Wi-Fi disabled")
                             }
@@ -182,12 +192,13 @@ class MainActivity : AppCompatActivity() {
                     Manifest.permission.READ_PHONE_STATE
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
-                telephonyCallback = object : TelephonyCallback(), TelephonyCallback.SignalStrengthsListener {
-                    override fun onSignalStrengthsChanged(signalStrength: SignalStrength) {
-                        val cellularStrength = signalStrength.level
-                        logSignalStrengthIfNeeded(cellularStrength)
+                telephonyCallback =
+                    object : TelephonyCallback(), TelephonyCallback.SignalStrengthsListener {
+                        override fun onSignalStrengthsChanged(signalStrength: SignalStrength) {
+                            val cellularStrength = signalStrength.level
+                            logSignalStrengthIfNeeded(cellularStrength)
+                        }
                     }
-                }
                 telephonyManager.registerTelephonyCallback(mainExecutor, telephonyCallback)
             } else {
                 ActivityCompat.requestPermissions(
@@ -235,6 +246,7 @@ class MainActivity : AppCompatActivity() {
                     Log.d(TAG, "Denied permissions: $deniedPermissions")
                 }
             }
+
             PERMISSION_REQUEST_READ_PHONE_STATE -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     registerSignalStrengthListener()
@@ -242,6 +254,7 @@ class MainActivity : AppCompatActivity() {
                     Log.d("Permissions", "READ_PHONE_STATE permission denied")
                 }
             }
+
             else -> {
                 Log.d(TAG, "Unhandled permission request: $requestCode")
             }
@@ -258,12 +271,15 @@ class MainActivity : AppCompatActivity() {
                         it.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> {
                             Log.d("NetworkCallback", "Cellular connection available")
                         }
+
                         it.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> {
                             Log.d("NetworkCallback", "Wi-Fi connection available")
                         }
+
                         it.hasTransport(NetworkCapabilities.TRANSPORT_VPN) -> {
                             Log.d("NetworkCallback", "VPN connection available")
                         }
+
                         else -> {
                             Log.d(TAG, "Unhandled network callback")
                         }
@@ -281,7 +297,10 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+            override fun onCapabilitiesChanged(
+                network: Network,
+                networkCapabilities: NetworkCapabilities
+            ) {
                 super.onCapabilitiesChanged(network, networkCapabilities)
                 if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
                     Log.d(TAG, "VPN capabilities changed")
@@ -322,7 +341,8 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
         Log.d(TAG, "onStart() called")
         // Register the BroadcastReceiver to listen for custom broadcasts
-        val intentFilter = IntentFilter(BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION))
+        val intentFilter =
+            IntentFilter(BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION))
 //        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
 //            Log.d(
 //                TAG,
