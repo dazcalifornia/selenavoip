@@ -35,7 +35,7 @@ open class BroadcastEventReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        private const val TAG = "CustomBroadcastReceiver"
+        private val TAG: String = BroadcastEventReceiver::class.java.simpleName
         const val ACTION_REGISTRATION_CHECK = "com.synapes.selenvoip.REGISTRATION_CHECK"
         const val ACTION_MAKE_CALL = "com.synapes.selenvoip.MAKE_CALL"
         const val EXTRA_PHONE_NUMBER = "phone_number"
