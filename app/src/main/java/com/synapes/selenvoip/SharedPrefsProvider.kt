@@ -303,31 +303,31 @@ class SharedPrefsProvider : ContentProvider() {
 
 
     companion object {
-        private val TAG = "**SHARED PREFS**"
-        private val AUTHORITY = "com.synapes.voip.provider"
+        private val TAG = SharedPrefsProvider::class.java.simpleName
+        private const val AUTHORITY = Config.SHARED_PREFS_AUTHORITY
         val CONTENT_URI: Uri = Uri.parse("content://$AUTHORITY/prefs")
 
-        private const val PREFS_URI = 1
-        private val PREFS_FILENAME = "selen_shared_preferences"
-        private val PREFS_ENCRYPTED_FILE_NAME = "encrypted_selen_shared_preferences"
-        private val PREFS_KEY_ACCOUNTS = "accounts"
-        private val PREFS_KEY_CODEC_PRIORITIES = "codec_priorities"
-        private val PREFS_KEY_DND = "dnd_pref"
-        private val PREFS_KEY_VERIFY_SIP_SERVER_CERT = "sip_server_cert_verification_enabled"
-        private val PREFS_KEY_ENCRYPTION_ENABLED = "encryption_enabled"
-        private val PREFS_KEY_KEYSTORE_ALIAS = "keystore_alias"
+        private const val PREFS_URI = Config.PREFS_URI
+        private val PREFS_FILENAME = Config.PREFS_FILENAME
+        private val PREFS_ENCRYPTED_FILE_NAME = Config.PREFS_ENCRYPTED_FILE_NAME
+        private val PREFS_KEY_ACCOUNTS = Config.PREFS_KEY_ACCOUNTS
+        private val PREFS_KEY_CODEC_PRIORITIES = Config.PREFS_KEY_CODEC_PRIORITIES
+        private val PREFS_KEY_DND = Config.PREFS_KEY_DND
+        private val PREFS_KEY_VERIFY_SIP_SERVER_CERT = Config.PREFS_KEY_VERIFY_SIP_SERVER_CERT
+        private val PREFS_KEY_ENCRYPTION_ENABLED = Config.PREFS_KEY_ENCRYPTION_ENABLED
+        private val PREFS_KEY_KEYSTORE_ALIAS = Config.PREFS_KEY_KEYSTORE_ALIAS
 
-        private const val KEY_EXTENSION_NUMBER = "extension_number"
-        private const val KEY_EXTENSION_PASSWORD = "extension_password"
-        private const val KEY_DESTINATION_NUMBER = "destination_number"
-        private const val KEY_LAT = "lat"
-        private const val KEY_LON = "lon"
-        private const val KEY_IS_ONLINE = "is_online"
-        private const val KEY_MISSING_FIELDS = "missing_fields"
-        private const val KEY_NEEDS_ATTENTION = "needs_attention"
-        private const val KEY_PHONE_NUMBER = "phone_number"
-        private const val KEY_COMPANY_NAME = "company_name"
-        private const val KEY_LOCATION_DESCRIPTION = "location_description"
+        private const val KEY_EXTENSION_NUMBER = Config.KEY_EXTENSION_NUMBER
+        private const val KEY_EXTENSION_PASSWORD = Config.KEY_EXTENSION_PASSWORD
+        private const val KEY_DESTINATION_NUMBER = Config.KEY_DESTINATION_NUMBER
+        private const val KEY_LAT = Config.KEY_LAT
+        private const val KEY_LON = Config.KEY_LON
+        private const val KEY_IS_ONLINE = Config.KEY_IS_ONLINE
+        private const val KEY_MISSING_FIELDS = Config.KEY_MISSING_FIELDS
+        private const val KEY_NEEDS_ATTENTION = Config.KEY_NEEDS_ATTENTION
+        private const val KEY_PHONE_NUMBER = Config.KEY_PHONE_NUMBER
+        private const val KEY_COMPANY_NAME = Config.KEY_COMPANY_NAME
+        private const val KEY_LOCATION_DESCRIPTION = Config.KEY_LOCATION_DESCRIPTION
 
 
 //        fun updateDeviceInfo(context: Context, deviceInfo: DeviceInfo) {
