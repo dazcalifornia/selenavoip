@@ -6,6 +6,7 @@ class Config {
     companion object {
         const val PERMISSION_REQUEST_CODE = 555
         const val NAMESPACE = "com.synapes.selenvoip"
+        const val AGENT_NAME = "SelenVOIP"
 
     }
 }
