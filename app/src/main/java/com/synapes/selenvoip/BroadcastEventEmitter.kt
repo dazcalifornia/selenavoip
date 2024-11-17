@@ -82,6 +82,11 @@ class BroadcastEventEmitter(context: Context) : SipServiceConstants {
             registrationStateCode
         )
 
+        Log.d(
+            TAG,
+            "+++++ Broadcasting Registration intent: Action: ${intent.action}, AccountID: $accountID"
+        )
+
         mContext.sendBroadcast(intent)
     }
 
@@ -110,6 +115,11 @@ class BroadcastEventEmitter(context: Context) : SipServiceConstants {
         intent.putExtra(SipServiceConstants.Companion.PARAM_CALL_STATUS, callStateStatus)
         intent.putExtra(SipServiceConstants.Companion.PARAM_CONNECT_TIMESTAMP, connectTimestamp)
 
+        Log.d(
+            TAG,
+            "+++++ Broadcasting Call State intent: Action: ${intent.action}, AccountID: $accountID, CallID: $callID, CallStateCode: $callStateCode, CallStateStatus: $callStateStatus"
+        )
+
         mContext.sendBroadcast(intent)
     }
 
@@ -128,6 +138,12 @@ class BroadcastEventEmitter(context: Context) : SipServiceConstants {
             .putExtra(SipServiceConstants.Companion.PARAM_CALL_ID, callID)
             .putExtra(SipServiceConstants.Companion.PARAM_MEDIA_STATE_KEY, state)
             .putExtra(SipServiceConstants.Companion.PARAM_MEDIA_STATE_VALUE, value)
+
+        Log.d(
+            TAG,
+            "+++++ Broadcasting Call Media State intent: Action: ${intent.action}, AccountID: $accountID, CallID: $callID, State: $state, Value: $value"
+        )
+
         mContext.sendBroadcast(intent)
     }
 
@@ -147,6 +163,12 @@ class BroadcastEventEmitter(context: Context) : SipServiceConstants {
             .putExtra(SipServiceConstants.Companion.PARAM_IS_VIDEO, isVideo)
             .putExtra(SipServiceConstants.Companion.PARAM_IS_VIDEO_CONF, isVideoConference)
             .putExtra(SipServiceConstants.Companion.PARAM_IS_TRANSFER, isTransfer)
+
+        Log.d(
+            TAG,
+            "+++++ Broadcasting Outgoing Call intent: Action: ${intent.action}, AccountID: $accountID, CallID: $callID, Number: $number, IsVideo: $isVideo, IsVideoConference: $isVideoConference, IsTransfer: $isTransfer"
+        )
+
         sendExplicitBroadcast(intent)
     }
 
@@ -155,6 +177,11 @@ class BroadcastEventEmitter(context: Context) : SipServiceConstants {
 
         intent.setAction(getAction(BroadcastAction.STACK_STATUS))
         intent.putExtra(SipServiceConstants.Companion.PARAM_STACK_STARTED, started)
+
+        Log.d(
+            TAG,
+            "+++++ Broadcasting Stack Status intent: Action: ${intent.action}, Started: $started"
+        )
 
         mContext.sendBroadcast(intent)
     }
@@ -168,6 +195,11 @@ class BroadcastEventEmitter(context: Context) : SipServiceConstants {
             codecPriorities
         )
 
+        Log.d(
+            TAG,
+            "+++++ Broadcasting Codec Priorities intent: Action: ${intent.action}, CodecPriorities: $codecPriorities"
+        )
+
         mContext.sendBroadcast(intent)
     }
 
@@ -176,6 +208,11 @@ class BroadcastEventEmitter(context: Context) : SipServiceConstants {
 
         intent.setAction(getAction(BroadcastAction.CODEC_PRIORITIES_SET_STATUS))
         intent.putExtra(SipServiceConstants.Companion.PARAM_SUCCESS, success)
+
+        Log.d(
+            TAG,
+            "+++++ Broadcasting Codec Priorities Set Status intent: Action: ${intent.action}, Success: $success"
+        )
 
         mContext.sendBroadcast(intent)
     }
@@ -187,6 +224,11 @@ class BroadcastEventEmitter(context: Context) : SipServiceConstants {
         intent.putExtra(SipServiceConstants.Companion.PARAM_DISPLAY_NAME, displayName)
         intent.putExtra(SipServiceConstants.Companion.PARAM_REMOTE_URI, uri)
 
+        Log.d(
+            TAG,
+            "+++++ Broadcasting Missed Call intent: Action: ${intent.action}, DisplayName: $displayName, Uri: $uri"
+        )
+
         sendExplicitBroadcast(intent)
     }
 
@@ -196,6 +238,11 @@ class BroadcastEventEmitter(context: Context) : SipServiceConstants {
         intent.setAction(getAction(BroadcastAction.VIDEO_SIZE))
         intent.putExtra(SipServiceConstants.Companion.PARAM_INCOMING_VIDEO_WIDTH, width)
         intent.putExtra(SipServiceConstants.Companion.PARAM_INCOMING_VIDEO_HEIGHT, height)
+
+        Log.d(
+            TAG,
+            "+++++ Broadcasting Video Size intent: Action: ${intent.action}, Width: $width, Height: $height"
+        )
 
         mContext.sendBroadcast(intent)
 
@@ -217,6 +264,12 @@ class BroadcastEventEmitter(context: Context) : SipServiceConstants {
             .putExtra(SipServiceConstants.Companion.PARAM_CALL_STATS_CALL_STATUS, callStateStatus)
             .putExtra(SipServiceConstants.Companion.PARAM_CALL_STATS_RX_STREAM, rx)
             .putExtra(SipServiceConstants.Companion.PARAM_CALL_STATS_TX_STREAM, tx)
+
+        Log.d(
+            TAG,
+            "+++++ Broadcasting Call Stats intent: Action: ${intent.action}, CallID: $callID, Duration: $duration, AudioCodec: $audioCodec, CallStateStatus: $callStateStatus, Rx: $rx, Tx: $tx"
+        )
+
         mContext.sendBroadcast(intent)
     }
 
@@ -224,6 +277,12 @@ class BroadcastEventEmitter(context: Context) : SipServiceConstants {
         val intent = Intent()
         intent.setAction(getAction(BroadcastAction.CALL_RECONNECTION_STATE))
         intent.putExtra(SipServiceConstants.Companion.PARAM_CALL_RECONNECTION_STATE, state)
+
+        Log.d(
+            TAG,
+            "+++++ Broadcasting Call Reconnection State intent: Action: ${intent.action}, State: $state"
+        )
+
         mContext.sendBroadcast(intent)
     }
 
@@ -232,12 +291,24 @@ class BroadcastEventEmitter(context: Context) : SipServiceConstants {
         intent.setAction(getAction(BroadcastAction.SILENT_CALL_STATUS))
         intent.putExtra(SipServiceConstants.Companion.PARAM_SILENT_CALL_STATUS, status)
         intent.putExtra(SipServiceConstants.Companion.PARAM_NUMBER, number)
+
+        Log.d(
+            TAG,
+            "+++++ Broadcasting Silent Call Status intent: Action: ${intent.action}, Status: $status, Number: $number"
+        )
+
         sendExplicitBroadcast(intent)
     }
 
     fun notifyTlsVerifyStatusFailed() {
         val intent = Intent()
         intent.setAction(getAction(BroadcastAction.NOTIFY_TLS_VERIFY_STATUS_FAILED))
+
+        Log.d(
+            TAG,
+            "+++++ Broadcasting Notify TLS Verify Status Failed intent: Action: ${intent.action}"
+        )
+
         sendExplicitBroadcast(intent)
     }
 
@@ -255,6 +326,8 @@ class BroadcastEventEmitter(context: Context) : SipServiceConstants {
             intent.setComponent(cn)
             intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
         }
+
+        Log.d(TAG, "+++++ Broadcasting EXPLICIT intent: Action: ${intent.action}")
 
         mContext.sendBroadcast(intent)
     }
