@@ -17,6 +17,7 @@ class Config {
         const val PREFS_KEY_VERIFY_SIP_SERVER_CERT = "sip_server_cert_verification_enabled"
         const val PREFS_KEY_ENCRYPTION_ENABLED = "encryption_enabled"
         const val PREFS_KEY_KEYSTORE_ALIAS = "keystore_alias"
+        const val PREFS_KEY_OBFUSCATION_ENABLED = "obfuscation_enabled"
 
         const val KEY_EXTENSION_NUMBER = "extension_number"
         const val KEY_EXTENSION_PASSWORD = "extension_password"

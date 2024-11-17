@@ -301,6 +301,14 @@ class SharedPrefsProvider : ContentProvider() {
         return sharedPrefs.getBoolean(PREFS_KEY_VERIFY_SIP_SERVER_CERT, false)
     }
 
+    fun setObfuscation(obfuscate: Boolean) {
+        sharedPrefs.edit().putBoolean(PREFS_KEY_OBFUSCATION_ENABLED, obfuscate).apply()
+    }
+
+    fun isObfuscationEnabled(): Boolean {
+        return sharedPrefs.getBoolean(PREFS_KEY_OBFUSCATION_ENABLED, false)
+    }
+
 
     companion object {
         private val TAG = SharedPrefsProvider::class.java.simpleName
@@ -316,6 +324,7 @@ class SharedPrefsProvider : ContentProvider() {
         private val PREFS_KEY_VERIFY_SIP_SERVER_CERT = Config.PREFS_KEY_VERIFY_SIP_SERVER_CERT
         private val PREFS_KEY_ENCRYPTION_ENABLED = Config.PREFS_KEY_ENCRYPTION_ENABLED
         private val PREFS_KEY_KEYSTORE_ALIAS = Config.PREFS_KEY_KEYSTORE_ALIAS
+        private val PREFS_KEY_OBFUSCATION_ENABLED = Config.PREFS_KEY_OBFUSCATION_ENABLED
 
         private const val KEY_EXTENSION_NUMBER = Config.KEY_EXTENSION_NUMBER
         private const val KEY_EXTENSION_PASSWORD = Config.KEY_EXTENSION_PASSWORD

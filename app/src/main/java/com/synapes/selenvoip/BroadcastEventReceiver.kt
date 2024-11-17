@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import android.os.Build
 import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.synapes.selenvoip.ObfuscationHelper.Companion.getValue
 
 open class BroadcastEventReceiver : BroadcastReceiver(), SipServiceConstants {
     private lateinit var receiverContext: Context
@@ -172,6 +173,7 @@ open class BroadcastEventReceiver : BroadcastReceiver(), SipServiceConstants {
             TAG,
             "Received: onIncomingCall - accountID: $accountID, callID: $callID, displayName: $displayName, remoteUri: $remoteUri"
         )
+        Log.d(TAG, " ** OBFUSCATE ** ${getValue(getReceiverContext(), accountID.toString())}")
     }
 
     private fun handleCallState(intent: Intent) {
