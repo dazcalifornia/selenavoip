@@ -44,15 +44,15 @@ class CodecPriority : Parcelable, Comparable<CodecPriority?> {
     fun getCodecName(): String {
         val name = mCodecId!!.split("/".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0]
 
-        when (name) {
-            "G729" -> return G729_LABEL
-            "PCMU" -> return PCMU_LABEL
-            "PCMA" -> return PCMA_LABEL
-            "speex" -> return SPEEX_LABEL
-            "G722" -> return G722_LABEL
-            "G7221" -> return G7221_LABEL
-            "opus" -> return OPUS_LABEL
-            else -> return name
+        return when (name) {
+            "G729" -> G729_LABEL
+            "PCMU" -> PCMU_LABEL
+            "PCMA" -> PCMA_LABEL
+            "speex" -> SPEEX_LABEL
+            "G722" -> G722_LABEL
+            "G7221" -> G7221_LABEL
+            "opus" -> OPUS_LABEL
+            else -> name
         }
     }
 

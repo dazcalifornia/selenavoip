@@ -9,7 +9,7 @@ class Jitter : Parcelable {
     private val mean: Int
     private val min: Int
 
-    internal constructor(max: Int, mean: Int, min: Int) {
+    constructor(max: Int, mean: Int, min: Int) {
         this.max = max
         this.mean = mean
         this.min = min
@@ -49,7 +49,7 @@ class Jitter : Parcelable {
 
     companion object {
         @JvmField
-        val CREATOR: Parcelable.Creator<Jitter?> = object : Parcelable.Creator<Jitter?> {
+        val CREATOR: Parcelable.Creator<Jitter> = object : Parcelable.Creator<Jitter> {
             override fun createFromParcel(`in`: Parcel): Jitter {
                 return Jitter(`in`)
             }
