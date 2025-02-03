@@ -129,6 +129,46 @@ class MainActivity : AppCompatActivity() {
 //        localBroadcastReceiver.register(this)
 
         requestPermissions()
+
+//        binding.contentMain.callButton.setOnClickListener {
+//            Toast.makeText(this, "Call button clicked!", Toast.LENGTH_SHORT).show()
+//        }
+
+//        binding.callButton.setOnClickListener {
+//            Toast.makeText(this, "Call button clicked!", Toast.LENGTH_SHORT).show()
+//        }
+        // Set up the call button click listener
+        binding.callButton.setOnClickListener {
+            val destinationNumber = binding.destinationNumberEditText.text.toString()
+            if (destinationNumber.isNotEmpty()) {
+                Toast.makeText(this, "Making call to $destinationNumber", Toast.LENGTH_SHORT).show()
+                startCall(destinationNumber)
+            } else {
+                Toast.makeText(this, "Please enter a destination number", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+    }
+
+    private fun startCall(destinationNumber: String) {
+        // Assuming you have a method to get the account ID
+        val accountId = getAccountId()
+
+        // Start the CallActivity for an outgoing call
+        CallActivity.startActivityOut(
+            this,
+            accountId,
+            -1, // The call ID will be assigned by the SIP service
+            destinationNumber,
+            false, // Set to true if you want video calls
+            false // Set to true if it's a video conference
+        )
+    }
+
+    private fun getAccountId(): String {
+        // Implement this method to return the appropriate account ID
+        // You might want to store this in SharedPreferences or retrieve it from your SIP service
+        return "your_account_id_here"
     }
 
     private fun requestPermissions() {
@@ -442,6 +482,7 @@ class MainActivity : AppCompatActivity() {
 //            )
 //            mReceiver.register(this)
 //        }
+
     }
 
     override fun onStop() {

@@ -67,4 +67,7 @@
         <string name="incoming">Incoming Call</string>
         <string name="connecting">Connecting</string>
         <string name="confirmed">Confirmed</string>
+    <string name="call">Call</string>
+        <string name="enter_destination_number">Enter destination number</string>
+        <string name="hq_default_number_string">9999</string>
 </resources>
