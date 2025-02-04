@@ -123,20 +123,8 @@ class MainActivity : AppCompatActivity() {
         val filter = IntentFilter(BroadcastEventReceiver.LOCAL_BROADCAST_ACTION)
         LocalBroadcastManager.getInstance(this).registerReceiver(localBroadcastReceiver, filter)
 
-//        LocalBroadcastManager.getInstance(this).registerReceiver(localBroadcastReceiver, filter)
-//
-//        localBroadcastReceiver.setReceiverContext(this)
-//        localBroadcastReceiver.register(this)
-
         requestPermissions()
 
-//        binding.contentMain.callButton.setOnClickListener {
-//            Toast.makeText(this, "Call button clicked!", Toast.LENGTH_SHORT).show()
-//        }
-
-//        binding.callButton.setOnClickListener {
-//            Toast.makeText(this, "Call button clicked!", Toast.LENGTH_SHORT).show()
-//        }
         // Set up the call button click listener
         binding.callButton.setOnClickListener {
             val destinationNumber = binding.destinationNumberEditText.text.toString()
@@ -151,25 +139,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startCall(destinationNumber: String) {
-        // Assuming you have a method to get the account ID
-        val accountId = getAccountId()
+        val accountID = mAccountId
 
-        // Start the CallActivity for an outgoing call
-        CallActivity.startActivityOut(
-            this,
-            accountId,
-            -1, // The call ID will be assigned by the SIP service
-            destinationNumber,
-            false, // Set to true if you want video calls
-            false // Set to true if it's a video conference
-        )
+        if (accountID != null) {
+            // Create an Intent with the LOCAL_BROADCAST_ACTION
+            val intent = Intent(BroadcastEventReceiver.LOCAL_BROADCAST_ACTION).apply {
+                putExtra(BroadcastEventReceiver.EXTRA_ORIGINAL_ACTION, BroadcastEventReceiver.ACTION_MAKE_CALL)
+                putExtra(BroadcastEventReceiver.EXTRA_PHONE_NUMBER, destinationNumber)
+                putExtra(SipServiceConstants.PARAM_ACCOUNT_ID, accountID)
+                putExtra(SipServiceConstants.PARAM_IS_VIDEO, false) // Set to true for video calls
+            }
+
+            // Send the local broadcast
+            LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+            Log.d(TAG, "Local broadcast ACTION_MAKE_CALL sent for number: $destinationNumber, AccountID: $accountID")
+        } else {
+            Log.e(TAG, "AccountID is null. Make sure auto-login was successful.")
+            Toast.makeText(this, "Account not set up properly. Please try logging in again.", Toast.LENGTH_SHORT).show()
+        }
     }
 
-    private fun getAccountId(): String {
-        // Implement this method to return the appropriate account ID
-        // You might want to store this in SharedPreferences or retrieve it from your SIP service
-        return "your_account_id_here"
-    }
 
     private fun requestPermissions() {
         val permissionsToRequest = REQUIRED_PERMISSIONS.filter {
