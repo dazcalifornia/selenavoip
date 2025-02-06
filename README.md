@@ -1,6 +1,7 @@
 # Synapes Selen VOIP Android App V.2.0.0
 
 ## How This App Works Internally:
+1. 
 
    a) It reads config from SharedPreferences:
       - On startup, the app retrieves stored account information and settings from encrypted SharedPreferences.

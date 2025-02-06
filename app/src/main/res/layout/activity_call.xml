@@ -43,7 +43,7 @@
             android:id="@+id/buttonAccept"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Accept"
+            android:text="@string/accept"
             app:layout_constraintBottom_toTopOf="@id/buttonHangup"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
@@ -52,7 +52,7 @@
             android:id="@+id/buttonHangup"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Decline"
+            android:text="@string/decline"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
@@ -157,6 +157,7 @@
                 android:layout_height="50dp"
                 android:layout_marginLeft="20dp"
                 android:layout_marginRight="20dp"
+                android:contentDescription="@string/camera_switch"
                 android:scaleType="centerInside"
                 android:src="@drawable/switch_camera" />
         </LinearLayout>

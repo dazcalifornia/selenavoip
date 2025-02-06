@@ -8,11 +8,12 @@ import android.os.Build
 import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.synapes.selenvoip.ObfuscationHelper.Companion.getValue
+import org.pjsip.pjsua2.pjsip_status_code
 
 open class BroadcastEventReceiver : BroadcastReceiver(), SipServiceConstants {
     private lateinit var receiverContext: Context
 
-    fun setReceiverContext(context: Context) {
+    open fun setReceiverContext(context: Context) {
         Log.d(TAG, "Setting receiver context to: $context")
         receiverContext = context
     }
@@ -33,20 +34,20 @@ open class BroadcastEventReceiver : BroadcastReceiver(), SipServiceConstants {
 
         when (intent.action) {
             // CUSTOMS
-            ACTION_REGISTRATION_CHECK -> {
-                Log.d(TAG, "Received REGISTRATION_CHECK broadcast")
-            }
-
-            ACTION_MAKE_CALL -> {
-                Log.d(TAG, "Received MAKE_CALL broadcast")
-                val phoneNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER)
-                if (phoneNumber != null) {
-                    Log.d(TAG, "Making call to: $phoneNumber")
-                } else {
-                    Log.e(TAG, "No phone number provided for MAKE_CALL")
-                }
-
-            }
+//            ACTION_REGISTRATION_CHECK -> {
+//                Log.d(TAG, "Received REGISTRATION_CHECK broadcast")
+//            }
+//
+//            ACTION_MAKE_CALL -> {
+//                Log.d(TAG, "%%%%%%%%% Received MAKE_CALL broadcast %%%%%%%%%")
+//                val phoneNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER)
+//                if (phoneNumber != null) {
+//                    Log.d(TAG, "Making call to: $phoneNumber")
+//                } else {
+//                    Log.e(TAG, "No phone number provided for MAKE_CALL")
+//                }
+//
+//            }
 
             // VOIPs
             BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION) -> handleRegistration(
@@ -243,6 +244,7 @@ open class BroadcastEventReceiver : BroadcastReceiver(), SipServiceConstants {
         isTransfer: Boolean
     ) {
         Log.d(TAG, "Received: onOutgoingCall - accountID: $accountID, callID: $callID")
+        Log.d(TAG, " ** OBFUSCATE ** ${getValue(getReceiverContext(), accountID.toString())}")
     }
 
     private fun handleStackStatus(intent: Intent) {

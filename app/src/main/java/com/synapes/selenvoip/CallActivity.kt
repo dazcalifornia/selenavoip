@@ -3,6 +3,7 @@ package com.synapes.selenvoip
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
@@ -28,6 +29,7 @@ class CallActivity : AppCompatActivity(), SurfaceHolder.Callback {
     private var mNumber: String? = null
     private var mIsVideoConference = false
     private var micMute = false
+    private lateinit var mContext: Context
     private lateinit var mReceiver: BroadcastEventReceiver
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,7 +42,9 @@ class CallActivity : AppCompatActivity(), SurfaceHolder.Callback {
         registerReceiver()
         initData()
         setupClickListeners()
+
     }
+
     @SuppressLint("UnspecifiedRegisterReceiverFlag", "InlinedApi")
     private fun registerReceiver() {
         val intentFilter = IntentFilter().apply {
@@ -74,6 +78,7 @@ class CallActivity : AppCompatActivity(), SurfaceHolder.Callback {
             registerReceiver(mReceiver, intentFilter)
         }
     }
+
     private fun initData() {
         mAccountID = intent.getStringExtra("accountID")
         mCallID = intent.getIntExtra("callID", -1)
@@ -85,8 +90,9 @@ class CallActivity : AppCompatActivity(), SurfaceHolder.Callback {
         mIsVideoConference = intent.getBooleanExtra("isVideoConference", false)
 
         showLayout(mType)
+
         binding.textViewPeer.text = String.format("%s\n%s", mRemoteUri, mDisplayName)
-        binding.tvOutCallInfo.text = String.format("您正在呼叫 %s", mNumber)
+        binding.tvOutCallInfo.text = String.format("Calling %s", mNumber)
 
         val localHolder: SurfaceHolder = binding.svLocal.holder
         localHolder.addCallback(this)
@@ -141,16 +147,36 @@ class CallActivity : AppCompatActivity(), SurfaceHolder.Callback {
     }
 
     private fun showLayout(type: Int) {
-        binding.layoutIncomingCall.visibility = View.GONE
-        binding.layoutOutCall.visibility = View.GONE
-        binding.layoutConnected.visibility = View.GONE
+        // TODO: DELETE THESE REFERENCES
+//        binding.layoutIncomingCall.visibility = View.GONE
+//        binding.layoutOutCall.visibility = View.GONE
+//        binding.layoutConnected.visibility = View.GONE
 
         when (type) {
-            TYPE_INCOMING_CALL -> binding.layoutIncomingCall.visibility = View.VISIBLE
-            TYPE_OUT_CALL -> binding.layoutOutCall.visibility = View.VISIBLE
-            TYPE_CALL_CONNECTED -> binding.layoutConnected.visibility = View.VISIBLE
+            TYPE_INCOMING_CALL -> {
+                Log.d(TAG, "---> Showing incoming call layout")
+                binding.layoutIncomingCall.visibility = View.VISIBLE
+                binding.layoutOutCall.visibility = View.GONE
+                binding.layoutConnected.visibility = View.GONE
+            }
+
+            TYPE_OUT_CALL -> {
+                Log.d(TAG, "---> Showing outgoing call layout")
+                binding.layoutIncomingCall.visibility = View.GONE
+                binding.layoutOutCall.visibility = View.VISIBLE
+                binding.layoutConnected.visibility = View.GONE
+            }
+
+            TYPE_CALL_CONNECTED -> {
+                Log.d(TAG, "---> Showing connected call layout")
+                binding.layoutIncomingCall.visibility = View.GONE
+                binding.layoutOutCall.visibility = View.GONE
+                binding.layoutConnected.visibility = View.VISIBLE
+            }
+
             else -> {
-                Toast.makeText(this, "ERROR~~~~~~~~~~~~~", Toast.LENGTH_SHORT).show()
+                Log.e(TAG, "Unknown call type: $type")
+                Toast.makeText(this, "ERROR~~~~~~~~~~~~~", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -168,6 +194,15 @@ class CallActivity : AppCompatActivity(), SurfaceHolder.Callback {
 
     private fun initializeBroadcastReceiver() {
         mReceiver = object : BroadcastEventReceiver() {
+            override fun setReceiverContext(context: Context) {
+                super.setReceiverContext(context)
+                mContext = context
+            }
+//            override fun setReceiverContext(context: Context) {
+//                super.setReceiverContext(this@CallActivity)
+//                mContext = getReceiverContext()
+//            }
+
             override fun onIncomingCall(
                 accountID: String?,
                 callID: Int,
@@ -176,14 +211,8 @@ class CallActivity : AppCompatActivity(), SurfaceHolder.Callback {
                 isVideo: Boolean
             ) {
                 super.onIncomingCall(accountID, callID, displayName, remoteUri, isVideo)
-                val context = getReceiverContext()
-                if (context != null) {
-                    Toast.makeText(
-                        context,
-                        "Incoming call from [${remoteUri}]",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                Log.d(TAG, "----CALLACTIVITY---- onIncomingCall: accountID=$accountID, callID=$callID, displayName=$displayName, remoteUri=$remoteUri, isVideo=$isVideo")
+                Toast.makeText(mContext, "call activity -- Incoming call", Toast.LENGTH_LONG).show()
             }
 
             override fun onCallState(
@@ -200,31 +229,25 @@ class CallActivity : AppCompatActivity(), SurfaceHolder.Callback {
                     callStatusCode,
                     connectTimestamp
                 )
-
-                if (pjsip_inv_state.PJSIP_INV_STATE_CALLING.equals(callStateCode)) {
-                    binding.textViewCallState.text = getString(R.string.calling)
-                } else if (pjsip_inv_state.PJSIP_INV_STATE_INCOMING.equals(callStateCode)) {
-                    binding.textViewCallState.text = getString(R.string.incoming)
-                } else if (pjsip_inv_state.PJSIP_INV_STATE_EARLY.equals(callStateCode)) {
-                    // Ringing
-                    binding.textViewCallState.text = getString(R.string.early)
-                } else if (pjsip_inv_state.PJSIP_INV_STATE_CONNECTING.equals(callStateCode)) {
-                    // Connecting
-                    binding.textViewCallState.text = getString(R.string.connecting)
-                } else if (pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED.equals(callStateCode)) {
-                    // Connection successful
-                    binding.textViewCallState.text = getString(R.string.confirmed)
-                    showLayout(CallActivity.Companion.TYPE_CALL_CONNECTED)
-                } else if (pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED.equals(callStateCode)) {
-                    // Disconnected
-                    finish()
-                } else if (pjsip_inv_state.PJSIP_INV_STATE_NULL.equals(callStateCode)) {
-                    // Unknown error
-                    val context = getReceiverContext()
-                    if (context != null) {
-                        Toast.makeText(context, "Unknown error", Toast.LENGTH_SHORT).show()
+                Log.d(TAG, "******* onCallState: accountID=$accountID, callID=$callID, callStateCode=$callStateCode, callStatusCode=$callStatusCode")
+                when (callStateCode) {
+                    pjsip_inv_state.PJSIP_INV_STATE_CALLING -> binding.textViewCallState.text = "Calling"
+                    pjsip_inv_state.PJSIP_INV_STATE_INCOMING -> binding.textViewCallState.text = "Incoming"
+                    pjsip_inv_state.PJSIP_INV_STATE_EARLY -> binding.textViewCallState.text = "Early"
+                    pjsip_inv_state.PJSIP_INV_STATE_CONNECTING -> binding.textViewCallState.text = "Connecting"
+                    pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED -> {
+                        binding.textViewCallState.text = "Confirmed"
+                        showLayout(CallActivity.Companion.TYPE_CALL_CONNECTED)
                     }
-                    finish()
+                    pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED -> finish()
+                    pjsip_inv_state.PJSIP_INV_STATE_NULL -> {
+                        // Unknown error
+                        finish()
+                        if (mContext != null) {
+                            Toast.makeText(mContext, "Unknown error", Toast.LENGTH_SHORT).show()
+                        }
+                        finish()
+                    }
                 }
             }
 
@@ -236,6 +259,7 @@ class CallActivity : AppCompatActivity(), SurfaceHolder.Callback {
                 isVideoConference: Boolean,
                 isTransfer: Boolean
             ) {
+                Log.d(TAG, "###### onOutgoingCall: $accountID, $callID, $number, $isVideo, $isVideoConference, $isTransfer")
                 super.onOutgoingCall(
                     accountID,
                     callID,
@@ -309,40 +333,28 @@ class CallActivity : AppCompatActivity(), SurfaceHolder.Callback {
         const val TYPE_CALL_CONNECTED: kotlin.Int = 648
 
 
-        fun startActivityIn(
-            context: Context?,
-            accountID: String?,
-            callID: Int,
-            displayName: String?,
-            remoteUri: String?,
-            isVideo: Boolean
-        ) {
-            val intent = android.content.Intent(context, CallActivity::class.java)
-            intent.putExtra("accountID", accountID)
-            intent.putExtra("callID", callID)
-            intent.putExtra("displayName", displayName)
-            intent.putExtra("remoteUri", remoteUri)
-            intent.putExtra("isVideo", isVideo)
-            intent.putExtra("type", CallActivity.Companion.TYPE_INCOMING_CALL)
-            context?.startActivity(intent)
+        fun startActivityIn(context: Context, accountID: String, callID: Int, displayName: String, remoteUri: String, isVideo: Boolean) {
+            val intent = Intent(context, CallActivity::class.java).apply {
+                putExtra("accountID", accountID)
+                putExtra("callID", callID)
+                putExtra("displayName", displayName)
+                putExtra("remoteUri", remoteUri)
+                putExtra("isVideo", isVideo)
+                putExtra("type", TYPE_INCOMING_CALL)
+            }
+            context.startActivity(intent)
         }
 
-        fun startActivityOut(
-            context: Context?,
-            accountID: String?,
-            callID: Int,
-            number: String?,
-            isVideo: Boolean,
-            isVideoConference: Boolean
-        ) {
-            val intent = android.content.Intent(context, CallActivity::class.java)
-            intent.putExtra("accountID", accountID)
-            intent.putExtra("callID", callID)
-            intent.putExtra("number", number)
-            intent.putExtra("isVideo", isVideo)
-            intent.putExtra("isVideoConference", isVideoConference)
-            intent.putExtra("type", CallActivity.Companion.TYPE_OUT_CALL)
-            context?.startActivity(intent)
+        fun startActivityOut(context: Context, accountID: String, callID: Int, number: String, isVideo: Boolean, isVideoConference: Boolean) {
+            val intent = Intent(context, CallActivity::class.java).apply {
+                putExtra("accountID", accountID)
+                putExtra("callID", callID)
+                putExtra("number", number)
+                putExtra("isVideo", isVideo)
+                putExtra("isVideoConference", isVideoConference)
+                putExtra("type", TYPE_OUT_CALL)
+            }
+            context.startActivity(intent)
         }
     }
 

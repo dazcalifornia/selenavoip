@@ -19,11 +19,13 @@ import android.telephony.PhoneStateListener
 import android.telephony.SignalStrength
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.synapes.selenvoip.databinding.ActivityMainBinding
+import org.pjsip.pjsua2.pjsip_status_code
 
 class MainActivity : AppCompatActivity() {
 
@@ -44,25 +46,54 @@ class MainActivity : AppCompatActivity() {
     private lateinit var networkCallback: ConnectivityManager.NetworkCallback
     private lateinit var telephonyCallback: TelephonyCallback
 
+    private lateinit var mReceiver: BroadcastEventReceiver
+
+
     private val localBroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val originalAction = intent.getStringExtra(BroadcastEventReceiver.EXTRA_ORIGINAL_ACTION)
-            Log.d(TAG, "Received local broadcast. Original action: $originalAction")
+            Log.d(TAG, "===LOCAL BROADCAST RECEIVED==== Original action: $originalAction")
 
             when (originalAction) {
-                BroadcastEventReceiver.ACTION_REGISTRATION_CHECK -> {
-                    Log.d(TAG, "MainActivity: Received REGISTRATION_CHECK broadcast")
-                }
+//                BroadcastEventReceiver.ACTION_REGISTRATION_CHECK -> {
+//                    Log.d(TAG, "MainActivity: Received REGISTRATION_CHECK broadcast")
+//                }
 
+                /*
                 BroadcastEventReceiver.ACTION_MAKE_CALL -> {
+                    // LOCAL BROADCAST: Make a call
                     Log.d(TAG, "MainActivity: Received MAKE_CALL broadcast")
                     val phoneNumber = intent.getStringExtra(BroadcastEventReceiver.EXTRA_PHONE_NUMBER)
-                    if (phoneNumber != null) {
-                        Log.d(TAG, "MainActivity: Making call to: $phoneNumber")
-                        // Implement your make call logic here
+                    val accountID = mAccountId
+                    if (phoneNumber != null && accountID != null) {
+                        Log.d(TAG, "MainActivity: Making call from $accountID to: $phoneNumber")
+                        CallActivity.startActivityOut(
+                            this@MainActivity,
+                            accountID,
+                            -1, // The call ID will be assigned by the SIP service
+                            phoneNumber,
+                            false, // Set to true if you want video calls
+                            false // Set to true if it's a video conference
+                        )
                     } else {
                         Log.e(TAG, "MainActivity: No phone number provided for MAKE_CALL")
                     }
+                }
+                */
+
+                BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.OUTGOING_CALL) -> {
+                    Log.d(TAG, "%%%%%%%%%%%%%%%%%%%%% MainActivity: Received: OUTGOING CALL")
+                    // FIXME: MAKE SURE TO USE THIS FROM GETRECEIVERCONTEXT METHOD
+                    CallActivity.startActivityOut(
+                        this@MainActivity,
+                        mAccountId.toString(),
+                        intent.getIntExtra(SipServiceConstants.PARAM_CALL_ID, -1),
+                        intent.getStringExtra(SipServiceConstants.PARAM_REMOTE_URI) ?: "",
+                        intent.getBooleanExtra(SipServiceConstants.PARAM_IS_VIDEO, false),
+                        false
+                    )
+                    Log.d(TAG, "-------- SHOWN CALL ACTIVITY SCREEN OUTGOING CALL")
+
                 }
 
                 BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION) -> {
@@ -78,7 +109,10 @@ class MainActivity : AppCompatActivity() {
                     val isVideo = intent.getBooleanExtra(SipServiceConstants.PARAM_IS_VIDEO, false)
                     Log.d(TAG, "Account ID: $accountID, Call ID: $callID, Display Name: $displayName, Remote URI: $remoteUri, Is Video: $isVideo")
 //                    handleIncomingCall(intent)
-                    SipServiceCommand.acceptIncomingCall(this@MainActivity, accountID.toString(), callID, isVideo);
+//                    SipServiceCommand.acceptIncomingCall(this@MainActivity, accountID.toString(), callID, isVideo);
+
+                    CallActivity.startActivityOut(this@MainActivity,
+                    accountID.toString(), callID, displayName.toString(), isVideo, false)
 
                 }
 
@@ -87,7 +121,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -111,17 +144,55 @@ class MainActivity : AppCompatActivity() {
 
         setSupportActionBar(binding.toolbar)
 
-        // Register the mainActivityReceiver to receive local broadcasts
-//        val filter = IntentFilter().apply {
-//            addAction(BroadcastEventReceiver.ACTION_REGISTRATION_CHECK)
-//            addAction(BroadcastEventReceiver.ACTION_MAKE_CALL)
-//            addAction(BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION))
-//            addAction(BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.INCOMING_CALL))
-//        }
-
         // Register the localBroadcastReceiver to receive local broadcasts
         val filter = IntentFilter(BroadcastEventReceiver.LOCAL_BROADCAST_ACTION)
         LocalBroadcastManager.getInstance(this).registerReceiver(localBroadcastReceiver, filter)
+
+        // Register SIP Broadcast Events
+//        mReceiver = object : BroadcastEventReceiver() {
+//            override fun onRegistration(accountID: String?, registrationStateCode: Int) {
+//                Log.d(TAG, "!!!!=====!!! onRegistration: ")
+//                super.onRegistration(accountID, registrationStateCode)
+//                if (registrationStateCode == pjsip_status_code.PJSIP_SC_OK) {
+//                if (registrationStateCode == pjsip_status_code.PJSIP_SC_OK) {
+//                    Toast.makeText(this@MainActivity, "**** Login successful, account: $accountID", Toast.LENGTH_LONG).show()
+//                    binding.layoutCallOut.visibility = View.VISIBLE
+//                    binding.layoutLogin.visibility = View.GONE
+//                } else {
+//                    Toast.makeText(this@MainActivity, "Login failed, code: $registrationStateCode", Toast.LENGTH_SHORT).show()
+//                }
+//            }
+
+//            override fun onIncomingCall(accountID: String?, callID: Int, displayName: String?, remoteUri: String?, isVideo: Boolean) {
+//                Log.d(TAG, "!!!!=====!!! in come ing: ")
+//                super.onIncomingCall(accountID, callID, displayName, remoteUri, isVideo)
+//                CallActivity.startActivityIn(this@MainActivity, accountID.toString(), callID, displayName.toString(), remoteUri.toString(), isVideo)
+//            }
+//
+//            override fun onOutgoingCall(
+//                accountID: String?,
+//                callID: Int,
+//                number: String?,
+//                isVideo: Boolean,
+//                isVideoConference: Boolean,
+//                isTransfer: Boolean
+//            ) {
+//                Log.d(TAG, "!!!!=====!!! out go ing: ")
+//                super.onOutgoingCall(
+//                    accountID,
+//                    callID,
+//                    number,
+//                    isVideo,
+//                    isVideoConference,
+//                    isTransfer
+//                )
+//                // FIXME: MAKE SURE TO USE "THIS" FROM GETRECEIVERCONTEXT METHOD
+//                CallActivity.startActivityOut(this@MainActivity,
+//                    accountID.toString(), callID, number.toString(), isVideo, false)
+//            }
+//        }
+//        mReceiver.register(this)
+
 
         requestPermissions()
 
@@ -130,35 +201,49 @@ class MainActivity : AppCompatActivity() {
             val destinationNumber = binding.destinationNumberEditText.text.toString()
             if (destinationNumber.isNotEmpty()) {
                 Toast.makeText(this, "Making call to $destinationNumber", Toast.LENGTH_SHORT).show()
-                startCall(destinationNumber)
+                audioCall(destinationNumber)
+
             } else {
                 Toast.makeText(this, "Please enter a destination number", Toast.LENGTH_SHORT).show()
             }
         }
 
     }
-
-    private fun startCall(destinationNumber: String) {
-        val accountID = mAccountId
-
-        if (accountID != null) {
-            // Create an Intent with the LOCAL_BROADCAST_ACTION
-            val intent = Intent(BroadcastEventReceiver.LOCAL_BROADCAST_ACTION).apply {
-                putExtra(BroadcastEventReceiver.EXTRA_ORIGINAL_ACTION, BroadcastEventReceiver.ACTION_MAKE_CALL)
-                putExtra(BroadcastEventReceiver.EXTRA_PHONE_NUMBER, destinationNumber)
-                putExtra(SipServiceConstants.PARAM_ACCOUNT_ID, accountID)
-                putExtra(SipServiceConstants.PARAM_IS_VIDEO, false) // Set to true for video calls
+    //Audio call
+    fun audioCall(callNumber: String) {
+        requestPermissions()
+        try {
+            mAccountId?.let { accountId ->
+                SipServiceCommand.makeCall(this, accountId, callNumber, false, false)
+            } ?: run {
+                Toast.makeText(this, "Account not set up", Toast.LENGTH_SHORT).show()
             }
-
-            // Send the local broadcast
-            LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-            Log.d(TAG, "Local broadcast ACTION_MAKE_CALL sent for number: $destinationNumber, AccountID: $accountID")
-        } else {
-            Log.e(TAG, "AccountID is null. Make sure auto-login was successful.")
-            Toast.makeText(this, "Account not set up properly. Please try logging in again.", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "Account error", Toast.LENGTH_SHORT).show()
         }
     }
-
+//    private fun startCall(destinationNumber: String) {
+//        val accountID = mAccountId
+//
+//        if (accountID != null) {
+//            // Create an Intent with the LOCAL_BROADCAST_ACTION
+//            val intent = Intent(BroadcastEventReceiver.LOCAL_BROADCAST_ACTION).apply {
+//                putExtra(BroadcastEventReceiver.EXTRA_ORIGINAL_ACTION, BroadcastEventReceiver.ACTION_MAKE_CALL)
+//                putExtra(BroadcastEventReceiver.EXTRA_PHONE_NUMBER, destinationNumber)
+//                putExtra(SipServiceConstants.PARAM_ACCOUNT_ID, accountID)
+//                putExtra(SipServiceConstants.PARAM_IS_VIDEO, false) // Set to true for video calls
+//            }
+//
+//            // Send the local broadcast
+//            LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+//            Log.d(TAG, "Local broadcast ACTION_MAKE_CALL sent for number: $destinationNumber, AccountID: $accountID")
+//        } else {
+//            Log.e(TAG, "AccountID is null. Make sure auto-login was successful.")
+//            Toast.makeText(this, "Account not set up properly. Please try logging in again.", Toast.LENGTH_SHORT).show()
+//        }
+//    }
+//
 
     private fun requestPermissions() {
         val permissionsToRequest = REQUIRED_PERMISSIONS.filter {
@@ -176,7 +261,6 @@ class MainActivity : AppCompatActivity() {
             initializeApp()
         }
     }
-
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onResume() {
@@ -294,7 +378,6 @@ class MainActivity : AppCompatActivity() {
             lastLoggedTime = currentTime
         }
     }
-
 
     override fun onRequestPermissionsResult(
         requestCode: Int,

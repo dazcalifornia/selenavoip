@@ -70,4 +70,7 @@
     <string name="call">Call</string>
         <string name="enter_destination_number">Enter destination number</string>
         <string name="hq_default_number_string">9999</string>
+    <string name="camera_switch">Camera Switch</string>
+    <string name="decline">Decline</string>
+        <string name="accept">Accept</string>
 </resources>
