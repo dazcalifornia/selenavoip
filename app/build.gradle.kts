@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
 }
-
+ //pls turn on the notepad
 android {
     namespace = "com.synapes.selenvoip"
     compileSdk = 34
@@ -24,6 +24,7 @@ android {
         manifestPlaceholders["consumerAppId"] = "com.synapes.selen_watchdog"
 
     }
+
 
     buildTypes {
         release {

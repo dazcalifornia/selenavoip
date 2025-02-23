@@ -34,6 +34,7 @@ class CallActivity : AppCompatActivity(), SurfaceHolder.Callback {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         WindowCompat.setDecorFitsSystemWindows(window, false)
         binding = ActivityCallBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -96,6 +97,7 @@ class CallActivity : AppCompatActivity(), SurfaceHolder.Callback {
 
         val localHolder: SurfaceHolder = binding.svLocal.holder
         localHolder.addCallback(this)
+        Log.d(TAG, "Call type received: $mType")
 
         binding.svRemote.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceCreated(surfaceHolder: SurfaceHolder) {}
@@ -147,11 +149,7 @@ class CallActivity : AppCompatActivity(), SurfaceHolder.Callback {
     }
 
     private fun showLayout(type: Int) {
-        // TODO: DELETE THESE REFERENCES
-//        binding.layoutIncomingCall.visibility = View.GONE
-//        binding.layoutOutCall.visibility = View.GONE
-//        binding.layoutConnected.visibility = View.GONE
-
+        Log.d(TAG,"Call type recieve",)
         when (type) {
             TYPE_INCOMING_CALL -> {
                 Log.d(TAG, "---> Showing incoming call layout")
@@ -165,6 +163,7 @@ class CallActivity : AppCompatActivity(), SurfaceHolder.Callback {
                 binding.layoutIncomingCall.visibility = View.GONE
                 binding.layoutOutCall.visibility = View.VISIBLE
                 binding.layoutConnected.visibility = View.GONE
+                Log.d(TAG, "---> After setting visibility: ${binding.layoutOutCall.visibility}")
             }
 
             TYPE_CALL_CONNECTED -> {
@@ -215,41 +214,66 @@ class CallActivity : AppCompatActivity(), SurfaceHolder.Callback {
                 Toast.makeText(mContext, "call activity -- Incoming call", Toast.LENGTH_LONG).show()
             }
 
-            override fun onCallState(
-                accountID: String?,
-                callID: Int,
-                callStateCode: Int,
-                callStatusCode: Int,
-                connectTimestamp: Long
-            ) {
-                super.onCallState(
-                    accountID,
-                    callID,
-                    callStateCode,
-                    callStatusCode,
-                    connectTimestamp
-                )
-                Log.d(TAG, "******* onCallState: accountID=$accountID, callID=$callID, callStateCode=$callStateCode, callStatusCode=$callStatusCode")
+
+            override fun onCallState(accountID: String?, callID: Int, callStateCode: Int, callStatusCode: Int, connectTimestamp: Long) {
+                super.onCallState(accountID, callID, callStateCode, callStatusCode, connectTimestamp)
+
+                Log.d(TAG, "📞 Call state changed: accountID=$accountID, callID=$callID, State=$callStateCode, Status=$callStatusCode")
+
                 when (callStateCode) {
-                    pjsip_inv_state.PJSIP_INV_STATE_CALLING -> binding.textViewCallState.text = "Calling"
-                    pjsip_inv_state.PJSIP_INV_STATE_INCOMING -> binding.textViewCallState.text = "Incoming"
-                    pjsip_inv_state.PJSIP_INV_STATE_EARLY -> binding.textViewCallState.text = "Early"
-                    pjsip_inv_state.PJSIP_INV_STATE_CONNECTING -> binding.textViewCallState.text = "Connecting"
-                    pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED -> {
-                        binding.textViewCallState.text = "Confirmed"
-                        showLayout(CallActivity.Companion.TYPE_CALL_CONNECTED)
+                    pjsip_inv_state.PJSIP_INV_STATE_CALLING -> {
+                        binding.textViewCallState.text = "Calling..."
                     }
-                    pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED -> finish()
-                    pjsip_inv_state.PJSIP_INV_STATE_NULL -> {
-                        // Unknown error
-                        finish()
-                        if (mContext != null) {
-                            Toast.makeText(mContext, "Unknown error", Toast.LENGTH_SHORT).show()
-                        }
+                    pjsip_inv_state.PJSIP_INV_STATE_CONNECTING -> {
+                        binding.textViewCallState.text = "Connecting..."
+                    }
+                    pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED -> {
+                        binding.textViewCallState.text = "Call Connected"
+                    }
+                    pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED -> {
+                        Log.d(TAG, "❌ Call disconnected")
                         finish()
                     }
                 }
             }
+
+
+
+//            override fun onCallState(
+//                accountID: String?,
+//                callID: Int,
+//                callStateCode: Int,
+//                callStatusCode: Int,
+//                connectTimestamp: Long
+//            ) {
+//                super.onCallState(
+//                    accountID,
+//                    callID,
+//                    callStateCode,
+//                    callStatusCode,
+//                    connectTimestamp
+//                )
+//                Log.d(TAG, "******* onCallState: accountID=$accountID, callID=$callID, callStateCode=$callStateCode, callStatusCode=$callStatusCode")
+//                when (callStateCode) {
+//                    pjsip_inv_state.PJSIP_INV_STATE_CALLING -> binding.textViewCallState.text = "Calling"
+//                    pjsip_inv_state.PJSIP_INV_STATE_INCOMING -> binding.textViewCallState.text = "Incoming"
+//                    pjsip_inv_state.PJSIP_INV_STATE_EARLY -> binding.textViewCallState.text = "Early"
+//                    pjsip_inv_state.PJSIP_INV_STATE_CONNECTING -> binding.textViewCallState.text = "Connecting"
+//                    pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED -> {
+//                        binding.textViewCallState.text = "Confirmed"
+//                        showLayout(CallActivity.Companion.TYPE_CALL_CONNECTED)
+//                    }
+//                    pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED -> finish()
+//                    pjsip_inv_state.PJSIP_INV_STATE_NULL -> {
+//                        // Unknown error
+//                        finish()
+//                        if (mContext != null) {
+//                            Toast.makeText(mContext, "Unknown error", Toast.LENGTH_SHORT).show()
+//                        }
+//                        finish()
+//                    }
+//                }
+//            }
 
             override fun onOutgoingCall(
                 accountID: String?,
@@ -356,6 +380,28 @@ class CallActivity : AppCompatActivity(), SurfaceHolder.Callback {
             }
             context.startActivity(intent)
         }
+
+//        fun startActivityOut(
+//            context: Context, accountID: String, callID: Int, number: String, isVideo: Boolean, isVideoConference: Boolean
+//        ) {
+//            Log.d("hi", "Outgoing call broadcast received with params:")
+//            Log.d("hi", "Account ID: ${accountID}")
+//            Log.d("hi", "Call ID: ${callID}")
+//            Log.d("hi", "Number: ${number}")
+//
+//
+//            val intent = Intent(context, CallActivity::class.java).apply {
+//                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+//                putExtra("accountID", accountID)
+//                putExtra("callID", callID)
+//                putExtra("number", number)
+//                putExtra("isVideo", isVideo)
+//                putExtra("isVideoConference", isVideoConference)
+//                putExtra("type", TYPE_OUT_CALL)
+//            }
+//            context.startActivity(intent)
+//
+//        }
     }
 
 }

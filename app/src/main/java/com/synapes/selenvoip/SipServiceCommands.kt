@@ -7,6 +7,7 @@ import android.net.Uri
 import android.util.Log
 import android.view.Surface
 import com.synapes.selenvoip.SharedPrefsProvider.Companion.getInstance
+import com.synapes.selenvoip.SipCall.Companion.TAG
 import org.pjsip.PjCameraInfo2
 import kotlin.jvm.java
 import kotlin.text.startsWith
@@ -144,15 +145,33 @@ object SipServiceCommand : SipServiceConstants {
     ) {
         checkAccount(accountID)
 
-        val intent = Intent(context, SipService::class.java)
-        intent.setAction(SipServiceConstants.Companion.ACTION_MAKE_CALL)
-        intent.putExtra(SipServiceConstants.Companion.PARAM_ACCOUNT_ID, accountID)
-        intent.putExtra(SipServiceConstants.Companion.PARAM_NUMBER, numberToCall)
-        intent.putExtra(SipServiceConstants.Companion.PARAM_IS_VIDEO, isVideo)
-        intent.putExtra(SipServiceConstants.Companion.PARAM_IS_VIDEO_CONF, isVideoConference)
-        intent.putExtra(SipServiceConstants.Companion.PARAM_IS_TRANSFER, isTransfer)
+        // Ensure numberToCall is not null and properly formatted
+        if (numberToCall.isNullOrEmpty()) {
+            Log.e(TAG, "Number to call is null or empty")
+            return
+        }
+
+        Log.d(TAG, """
+        SipCommand MakeCall Details:
+        - Account ID: $accountID
+        - Number to Call: $numberToCall
+        - Is Video: $isVideo
+        - Is Video Conference: $isVideoConference
+        - Is Transfer: $isTransfer
+    """.trimIndent())
+
+        val intent = Intent(context, SipService::class.java).apply {
+            action = SipServiceConstants.Companion.ACTION_MAKE_CALL
+            putExtra(SipServiceConstants.Companion.PARAM_ACCOUNT_ID, accountID)
+            putExtra(SipServiceConstants.Companion.PARAM_NUMBER, numberToCall)
+            putExtra(SipServiceConstants.Companion.PARAM_IS_VIDEO, isVideo)
+            putExtra(SipServiceConstants.Companion.PARAM_IS_VIDEO_CONF, isVideoConference)
+            putExtra(SipServiceConstants.Companion.PARAM_IS_TRANSFER, isTransfer)
+        }
+
         context.startService(intent)
     }
+
 
     fun makeTransferCall(
         context: Context,

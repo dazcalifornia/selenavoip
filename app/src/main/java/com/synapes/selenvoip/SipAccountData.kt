@@ -183,6 +183,7 @@ class SipAccountData : Parcelable {
 //
 //        return accountConfig
         val accountConfig = AccountConfig()
+
         accountConfig.idUri = getIdUri()
 //        println("IdUri: ${accountConfig.idUri}")
 
@@ -227,7 +228,15 @@ class SipAccountData : Parcelable {
 
         accountConfig.callConfig.timerSessExpiresSec = sessionTimerExpireSec.toLong()
 //        println("TimerSessExpiresSec: ${accountConfig.callConfig.timerSessExpiresSec}")
-
+//        accountConfig.mediaConfig.apply {
+//            transportConfig.qosType = pj_qos_type.PJ_QOS_TYPE_VOICE
+//            jbInit = 0  // Disable jitter buffer initially
+//            jbMaxSize = 500
+//            jbMinPrefetch = 1
+//            jbMaxPrefetch = 3
+//            enableIce = true  // Enable ICE for NAT traversal
+//            enableRtcp = true // Enable RTCP
+//        }
         return accountConfig
     }
 

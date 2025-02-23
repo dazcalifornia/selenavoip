@@ -154,6 +154,7 @@ open class BroadcastEventReceiver : BroadcastReceiver(), SipServiceConstants {
 
     private fun handleIncomingCall(intent: Intent) {
         Log.d(TAG, "Received: onIncomingCall --> calling function onIncomingCall")
+        Log.d(TAG, "Received: onIncomingCall --> loggercheck")
         onIncomingCall(
             intent.getStringExtra(SipServiceConstants.PARAM_ACCOUNT_ID),
             intent.getIntExtra(SipServiceConstants.PARAM_CALL_ID, -1),
@@ -225,6 +226,7 @@ open class BroadcastEventReceiver : BroadcastReceiver(), SipServiceConstants {
 
     private fun handleOutgoingCall(intent: Intent) {
         Log.d(TAG, "Received: onOutgoingCall")
+        Log.i(TAG, "hotDown")
         onOutgoingCall(
             intent.getStringExtra(SipServiceConstants.PARAM_ACCOUNT_ID),
             intent.getIntExtra(SipServiceConstants.PARAM_CALL_ID, -1),
@@ -243,6 +245,7 @@ open class BroadcastEventReceiver : BroadcastReceiver(), SipServiceConstants {
         isVideoConference: Boolean,
         isTransfer: Boolean
     ) {
+        Log.d("brub", "outcalling from Boardcast ")
         Log.d(TAG, "Received: onOutgoingCall - accountID: $accountID, callID: $callID")
         Log.d(TAG, " ** OBFUSCATE ** ${getValue(getReceiverContext(), accountID.toString())}")
     }

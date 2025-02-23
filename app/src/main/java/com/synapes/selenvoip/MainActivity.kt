@@ -1,590 +1,169 @@
 package com.synapes.selenvoip
 
-import android.Manifest
-import android.annotation.SuppressLint
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
-import android.widget.Toast
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.net.wifi.WifiManager
-import android.os.Build
-import android.telephony.PhoneStateListener
-import android.telephony.SignalStrength
-import android.telephony.TelephonyCallback
-import android.telephony.TelephonyManager
 import android.view.View
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.synapes.selenvoip.databinding.ActivityMainBinding
-import org.pjsip.pjsua2.pjsip_status_code
+import com.synapes.selenvoip.databinding.DialogLoginBinding
+import com.synapes.selenvoip.managers.BroadcastManager
+import com.synapes.selenvoip.managers.NetworkManager
+import com.synapes.selenvoip.managers.PermissionManager
+import com.synapes.selenvoip.managers.SipManager
 
-class MainActivity : AppCompatActivity() {
-
+class MainActivity<EditText : View?> : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-
-    private var mAccount: SipAccountData? = null
-    private var mAccountId: String? = null
-    private var isRegistrationComplete = false
-
-    private var lastLoggedSignalStrength: Int = -1
-    private var lastLoggedTime: Long = 0
-    private val LOG_INTERVAL = 60000 // 1 minute
-
-    private lateinit var systemBroadcastReceiver: BroadcastReceiver
-    private lateinit var connectivityManager: ConnectivityManager
-    private lateinit var telephonyManager: TelephonyManager
-    private lateinit var wifiManager: WifiManager
-    private lateinit var networkCallback: ConnectivityManager.NetworkCallback
-    private lateinit var telephonyCallback: TelephonyCallback
-
-    private lateinit var mReceiver: BroadcastEventReceiver
+    private lateinit var networkManager: NetworkManager
+    private lateinit var permissionManager: PermissionManager
+    private lateinit var sipManager: SipManager
+    private lateinit var broadcastManager: BroadcastManager
 
 
-    private val localBroadcastReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            val originalAction = intent.getStringExtra(BroadcastEventReceiver.EXTRA_ORIGINAL_ACTION)
-            Log.d(TAG, "===LOCAL BROADCAST RECEIVED==== Original action: $originalAction")
-
-            when (originalAction) {
-//                BroadcastEventReceiver.ACTION_REGISTRATION_CHECK -> {
-//                    Log.d(TAG, "MainActivity: Received REGISTRATION_CHECK broadcast")
-//                }
-
-                /*
-                BroadcastEventReceiver.ACTION_MAKE_CALL -> {
-                    // LOCAL BROADCAST: Make a call
-                    Log.d(TAG, "MainActivity: Received MAKE_CALL broadcast")
-                    val phoneNumber = intent.getStringExtra(BroadcastEventReceiver.EXTRA_PHONE_NUMBER)
-                    val accountID = mAccountId
-                    if (phoneNumber != null && accountID != null) {
-                        Log.d(TAG, "MainActivity: Making call from $accountID to: $phoneNumber")
-                        CallActivity.startActivityOut(
-                            this@MainActivity,
-                            accountID,
-                            -1, // The call ID will be assigned by the SIP service
-                            phoneNumber,
-                            false, // Set to true if you want video calls
-                            false // Set to true if it's a video conference
-                        )
-                    } else {
-                        Log.e(TAG, "MainActivity: No phone number provided for MAKE_CALL")
-                    }
-                }
-                */
-
-                BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.OUTGOING_CALL) -> {
-                    Log.d(TAG, "%%%%%%%%%%%%%%%%%%%%% MainActivity: Received: OUTGOING CALL")
-                    // FIXME: MAKE SURE TO USE THIS FROM GETRECEIVERCONTEXT METHOD
-                    CallActivity.startActivityOut(
-                        this@MainActivity,
-                        mAccountId.toString(),
-                        intent.getIntExtra(SipServiceConstants.PARAM_CALL_ID, -1),
-                        intent.getStringExtra(SipServiceConstants.PARAM_REMOTE_URI) ?: "",
-                        intent.getBooleanExtra(SipServiceConstants.PARAM_IS_VIDEO, false),
-                        false
-                    )
-                    Log.d(TAG, "-------- SHOWN CALL ACTIVITY SCREEN OUTGOING CALL")
-
-                }
-
-                BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION) -> {
-                    Log.d(TAG, "MainActivity: Received: onRegistration")
-                }
-
-                BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.INCOMING_CALL) -> {
-                    Log.d(TAG, "MainActivity: Received: Incoming call")
-                    val accountID = intent.getStringExtra(SipServiceConstants.PARAM_ACCOUNT_ID)
-                    val callID = intent.getIntExtra(SipServiceConstants.PARAM_CALL_ID, -1)
-                    val displayName = intent.getStringExtra(SipServiceConstants.PARAM_DISPLAY_NAME)
-                    val remoteUri = intent.getStringExtra(SipServiceConstants.PARAM_REMOTE_URI)
-                    val isVideo = intent.getBooleanExtra(SipServiceConstants.PARAM_IS_VIDEO, false)
-                    Log.d(TAG, "Account ID: $accountID, Call ID: $callID, Display Name: $displayName, Remote URI: $remoteUri, Is Video: $isVideo")
-//                    handleIncomingCall(intent)
-//                    SipServiceCommand.acceptIncomingCall(this@MainActivity, accountID.toString(), callID, isVideo);
-
-                    CallActivity.startActivityOut(this@MainActivity,
-                    accountID.toString(), callID, displayName.toString(), isVideo, false)
-
-                }
-
-                else -> {
-                    Log.d(TAG, "MainActivity: Unhandled broadcast: $originalAction")
-                }
-            }
-        }
+    init {
+        System.loadLibrary("pjsua2")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        // Initialize managers
-        connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-        telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-        wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
-
-        // Initialize the broadcast receiver
-        initSystemBroadcastReceiver()
-
-        // Register network callback
-        registerNetworkCallback()
-
-        // Register signal strength listener
-        registerSignalStrengthListener()
-
         setSupportActionBar(binding.toolbar)
 
-        // Register the localBroadcastReceiver to receive local broadcasts
-        val filter = IntentFilter(BroadcastEventReceiver.LOCAL_BROADCAST_ACTION)
-        LocalBroadcastManager.getInstance(this).registerReceiver(localBroadcastReceiver, filter)
-
-        // Register SIP Broadcast Events
-//        mReceiver = object : BroadcastEventReceiver() {
-//            override fun onRegistration(accountID: String?, registrationStateCode: Int) {
-//                Log.d(TAG, "!!!!=====!!! onRegistration: ")
-//                super.onRegistration(accountID, registrationStateCode)
-//                if (registrationStateCode == pjsip_status_code.PJSIP_SC_OK) {
-//                if (registrationStateCode == pjsip_status_code.PJSIP_SC_OK) {
-//                    Toast.makeText(this@MainActivity, "**** Login successful, account: $accountID", Toast.LENGTH_LONG).show()
-//                    binding.layoutCallOut.visibility = View.VISIBLE
-//                    binding.layoutLogin.visibility = View.GONE
-//                } else {
-//                    Toast.makeText(this@MainActivity, "Login failed, code: $registrationStateCode", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-
-//            override fun onIncomingCall(accountID: String?, callID: Int, displayName: String?, remoteUri: String?, isVideo: Boolean) {
-//                Log.d(TAG, "!!!!=====!!! in come ing: ")
-//                super.onIncomingCall(accountID, callID, displayName, remoteUri, isVideo)
-//                CallActivity.startActivityIn(this@MainActivity, accountID.toString(), callID, displayName.toString(), remoteUri.toString(), isVideo)
-//            }
-//
-//            override fun onOutgoingCall(
-//                accountID: String?,
-//                callID: Int,
-//                number: String?,
-//                isVideo: Boolean,
-//                isVideoConference: Boolean,
-//                isTransfer: Boolean
-//            ) {
-//                Log.d(TAG, "!!!!=====!!! out go ing: ")
-//                super.onOutgoingCall(
-//                    accountID,
-//                    callID,
-//                    number,
-//                    isVideo,
-//                    isVideoConference,
-//                    isTransfer
-//                )
-//                // FIXME: MAKE SURE TO USE "THIS" FROM GETRECEIVERCONTEXT METHOD
-//                CallActivity.startActivityOut(this@MainActivity,
-//                    accountID.toString(), callID, number.toString(), isVideo, false)
-//            }
-//        }
-//        mReceiver.register(this)
-
-
+        initializeManagers()
+        setupCallButton()
+        setupLoginButton()
         requestPermissions()
+        updateLoginState()
+    }
 
-        // Set up the call button click listener
+    private fun setupLoginButton() {
+        binding.loginButton.setOnClickListener {
+            if (sipManager.getRegistrationStatus()) {
+                // If already logged in, perform logout
+                sipManager.logout()
+                updateLoginState()
+            } else {
+                showLoginDialog()
+            }
+        }
+    }
+
+
+
+    private fun showLoginDialog() {
+        val dialogBinding = DialogLoginBinding.inflate(layoutInflater)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("SIP Login")
+            .setView(dialogBinding.root)
+            .setPositiveButton("Login", null)
+            .setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }
+            .create()
+
+        dialog.show()
+
+        // Set default values
+        dialogBinding.serverEditText.setText("synapes-pbx-poc-01.online")
+        dialogBinding.usernameEditText.setText("933933")
+        dialogBinding.passwordEditText.setText("933933")
+        dialogBinding.portEditText.setText("5060")
+
+        // Override positive button to handle validation
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val server = dialogBinding.serverEditText.text.toString()
+            val username = dialogBinding.usernameEditText.text.toString()
+            val password = dialogBinding.passwordEditText.text.toString()
+            val port = dialogBinding.portEditText.text.toString()
+
+            if (validateInputs(server, username, password, port)) {
+                performLogin(server, username, password, port)
+                dialog.dismiss()
+            }
+        }
+    }
+
+    private fun validateInputs(server: String, username: String, password: String, port: String): Boolean {
+        if (server.isEmpty() || username.isEmpty() || password.isEmpty() || port.isEmpty()) {
+            Toast.makeText(this, "All fields are required", Toast.LENGTH_SHORT).show()
+            return false
+        }
+        return true
+    }
+
+    private fun performLogin(server: String, username: String, password: String, port: String) {
+        try {
+            Log.d("MainActivity", "Attempting login with: server=$server, username=$username, port=$port")
+            sipManager.login(server, username, password, port)
+            updateLoginState()
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Login failed", e)
+            Toast.makeText(this, "Login failed: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
+    private fun updateLoginState() {
+        val isLoggedIn = sipManager.getRegistrationStatus()
+        binding.userInfoText.apply {
+            visibility = if (isLoggedIn) View.VISIBLE else View.GONE
+            text = if (isLoggedIn) "User: ${sipManager.getSipAccount()?.username}" else ""
+        }
+        binding.loginButton.text = if (isLoggedIn) "Logout" else "Login"
+    }
+
+
+
+
+    private fun initializeManagers() {
+        networkManager = NetworkManager(this)
+        permissionManager = PermissionManager(this)
+        sipManager = SipManager(this)
+        broadcastManager = BroadcastManager(this)
+    }
+
+    private fun setupCallButton() {
         binding.callButton.setOnClickListener {
             val destinationNumber = binding.destinationNumberEditText.text.toString()
             if (destinationNumber.isNotEmpty()) {
                 Toast.makeText(this, "Making call to $destinationNumber", Toast.LENGTH_SHORT).show()
-                audioCall(destinationNumber)
-
+                sipManager.audioCall(destinationNumber)
             } else {
                 Toast.makeText(this, "Please enter a destination number", Toast.LENGTH_SHORT).show()
             }
         }
-
     }
-    //Audio call
-    fun audioCall(callNumber: String) {
-        requestPermissions()
-        try {
-            mAccountId?.let { accountId ->
-                SipServiceCommand.makeCall(this, accountId, callNumber, false, false)
-            } ?: run {
-                Toast.makeText(this, "Account not set up", Toast.LENGTH_SHORT).show()
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Toast.makeText(this, "Account error", Toast.LENGTH_SHORT).show()
-        }
-    }
-//    private fun startCall(destinationNumber: String) {
-//        val accountID = mAccountId
-//
-//        if (accountID != null) {
-//            // Create an Intent with the LOCAL_BROADCAST_ACTION
-//            val intent = Intent(BroadcastEventReceiver.LOCAL_BROADCAST_ACTION).apply {
-//                putExtra(BroadcastEventReceiver.EXTRA_ORIGINAL_ACTION, BroadcastEventReceiver.ACTION_MAKE_CALL)
-//                putExtra(BroadcastEventReceiver.EXTRA_PHONE_NUMBER, destinationNumber)
-//                putExtra(SipServiceConstants.PARAM_ACCOUNT_ID, accountID)
-//                putExtra(SipServiceConstants.PARAM_IS_VIDEO, false) // Set to true for video calls
-//            }
-//
-//            // Send the local broadcast
-//            LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-//            Log.d(TAG, "Local broadcast ACTION_MAKE_CALL sent for number: $destinationNumber, AccountID: $accountID")
-//        } else {
-//            Log.e(TAG, "AccountID is null. Make sure auto-login was successful.")
-//            Toast.makeText(this, "Account not set up properly. Please try logging in again.", Toast.LENGTH_SHORT).show()
-//        }
-//    }
-//
 
     private fun requestPermissions() {
-        val permissionsToRequest = REQUIRED_PERMISSIONS.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }.toTypedArray()
-
-        if (permissionsToRequest.isNotEmpty()) {
-            ActivityCompat.requestPermissions(
-                this,
-                permissionsToRequest,
-                Config.PERMISSION_REQUEST_CODE
-            )
-        } else {
-            Log.i(TAG, "All permissions are already granted. Initializing app...")
-            initializeApp()
-        }
+        permissionManager.requestPermissions()
     }
 
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onResume() {
         super.onResume()
-        initSystemBroadcastReceiver()
-        registerNetworkCallback()
-        registerSignalStrengthListener()
-        checkVpnStatus()
+        networkManager.onResume()
     }
 
     override fun onPause() {
         super.onPause()
-        unregisterReceiver(systemBroadcastReceiver)
-        connectivityManager.unregisterNetworkCallback(networkCallback)
-        // Unregister TelephonyCallback if using Android 12+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            telephonyManager.unregisterTelephonyCallback(telephonyCallback)
-        }
-    }
-
-    private fun initSystemBroadcastReceiver() {
-        systemBroadcastReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                when (intent?.action) {
-                    Intent.ACTION_BOOT_COMPLETED -> {
-                        Log.d("SystemBroadcast", "Boot completed")
-                    }
-
-                    Intent.ACTION_POWER_CONNECTED -> {
-                        Log.d("SystemBroadcast", "Power connected")
-                    }
-
-                    Intent.ACTION_POWER_DISCONNECTED -> {
-                        Log.d("SystemBroadcast", "Power disconnected")
-                    }
-
-                    Intent.ACTION_BATTERY_LOW -> {
-                        Log.d("SystemBroadcast", "Battery low")
-                    }
-
-                    Intent.ACTION_AIRPLANE_MODE_CHANGED -> {
-                        val isAirplaneModeOn = intent.getBooleanExtra("state", false)
-                        Log.d("SystemBroadcast", "Airplane mode changed: $isAirplaneModeOn")
-                    }
-
-                    WifiManager.WIFI_STATE_CHANGED_ACTION -> {
-                        when (intent.getIntExtra(
-                            WifiManager.EXTRA_WIFI_STATE,
-                            WifiManager.WIFI_STATE_UNKNOWN
-                        )) {
-                            WifiManager.WIFI_STATE_ENABLED -> {
-                                Log.d("SystemBroadcast", "Wi-Fi enabled")
-                                updateWifiStrength()
-                            }
-
-                            WifiManager.WIFI_STATE_DISABLED -> {
-                                Log.d("SystemBroadcast", "Wi-Fi disabled")
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Register the broadcast receiver with an IntentFilter
-        val intentFilter = IntentFilter().apply {
-            addAction(Intent.ACTION_BOOT_COMPLETED)
-            addAction(Intent.ACTION_POWER_CONNECTED)
-            addAction(Intent.ACTION_POWER_DISCONNECTED)
-            addAction(Intent.ACTION_BATTERY_LOW)
-            addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED)
-            addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
-        }
-        registerReceiver(systemBroadcastReceiver, intentFilter)
-    }
-
-    private fun registerSignalStrengthListener() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.READ_PHONE_STATE
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                telephonyCallback =
-                    object : TelephonyCallback(), TelephonyCallback.SignalStrengthsListener {
-                        override fun onSignalStrengthsChanged(signalStrength: SignalStrength) {
-                            val cellularStrength = signalStrength.level
-                            logSignalStrengthIfNeeded(cellularStrength)
-                        }
-                    }
-                telephonyManager.registerTelephonyCallback(mainExecutor, telephonyCallback)
-            } else {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.READ_PHONE_STATE),
-                    PERMISSION_REQUEST_READ_PHONE_STATE
-                )
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            telephonyManager.listen(object : PhoneStateListener() {
-                override fun onSignalStrengthsChanged(signalStrength: SignalStrength) {
-                    val cellularStrength = signalStrength.level
-                    logSignalStrengthIfNeeded(cellularStrength)
-                }
-            }, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS)
-        }
-    }
-
-    private fun logSignalStrengthIfNeeded(cellularStrength: Int) {
-        val currentTime = System.currentTimeMillis()
-        if (cellularStrength != lastLoggedSignalStrength || currentTime - lastLoggedTime > LOG_INTERVAL) {
-            Log.d(TAG, "Cellular signal strength: $cellularStrength")
-            lastLoggedSignalStrength = cellularStrength
-            lastLoggedTime = currentTime
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            Config.PERMISSION_REQUEST_CODE -> {
-                if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                    Log.d(TAG, "All permissions granted")
-                    initializeApp()
-                } else {
-                    val deniedPermissions = permissions.filterIndexed { index, _ ->
-                        grantResults[index] == PackageManager.PERMISSION_DENIED
-                    }
-                    Log.d(TAG, "Denied permissions: $deniedPermissions")
-                }
-            }
-
-            PERMISSION_REQUEST_READ_PHONE_STATE -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    registerSignalStrengthListener()
-                } else {
-                    Log.d("Permissions", "READ_PHONE_STATE permission denied")
-                }
-            }
-
-            else -> {
-                Log.d(TAG, "Unhandled permission request: $requestCode")
-            }
-        }
-    }
-
-    private fun registerNetworkCallback() {
-        networkCallback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                super.onAvailable(network)
-                val capabilities = connectivityManager.getNetworkCapabilities(network)
-                capabilities?.let {
-                    when {
-                        it.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> {
-                            Log.d("NetworkCallback", "Cellular connection available")
-                        }
-
-                        it.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> {
-                            Log.d("NetworkCallback", "Wi-Fi connection available")
-                        }
-
-                        it.hasTransport(NetworkCapabilities.TRANSPORT_VPN) -> {
-                            Log.d("NetworkCallback", "VPN connection available")
-                        }
-
-                        else -> {
-                            Log.d(TAG, "Unhandled network callback")
-                        }
-                    }
-                }
-            }
-
-            override fun onLost(network: Network) {
-                super.onLost(network)
-                val capabilities = connectivityManager.getNetworkCapabilities(network)
-                if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true) {
-                    Log.d(TAG, "VPN connection lost")
-                } else {
-                    Log.d(TAG, "Network lost")
-                }
-            }
-
-            override fun onCapabilitiesChanged(
-                network: Network,
-                networkCapabilities: NetworkCapabilities
-            ) {
-                super.onCapabilitiesChanged(network, networkCapabilities)
-                if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
-                    Log.d(TAG, "VPN capabilities changed")
-                }
-            }
-        }
-
-        connectivityManager.registerDefaultNetworkCallback(networkCallback)
-    }
-
-    private fun updateWifiStrength() {
-        val wifiInfo = wifiManager.connectionInfo
-        if (wifiInfo.networkId != -1) {  // Check if connected to a network
-            val rssi = wifiInfo.rssi
-            val level = WifiManager.calculateSignalLevel(rssi, 5)
-            Log.d(TAG, "Wi-Fi signal strength: $level (RSSI: $rssi)")
-        } else {
-            Log.d(TAG, "Not connected to Wi-Fi")
-        }
-    }
-
-    private fun checkVpnStatus() {
-        val network = connectivityManager.activeNetwork
-        val capabilities = connectivityManager.getNetworkCapabilities(network)
-        if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true) {
-            Log.d(TAG, "VPN is currently active")
-        } else {
-            Log.d(TAG, "No active VPN connection")
-        }
-    }
-
-    private fun initializeApp() {
-        Log.d(TAG, "App initialization complete. Start logging in...")
-        autoLogin()
-    }
-
-    private fun autoLogin() {
-        Log.d(TAG, "Attempting auto-login...")
-
-        val server = "synapes-pbx-poc-01.online"
-        val account = "911911"
-        val password = "911911"
-        val port = "5060"
-
-        if (server.isNotEmpty() && account.isNotEmpty() && password.isNotEmpty() && port.isNotEmpty()) {
-            mAccount = SipAccountData().apply {
-                host = server
-                realm = "*"
-                this.port = port.toInt()
-                username = account
-                this.password = password
-                transport = SipAccountTransport.UDP
-
-                // Ensure these fields are set correctly
-                setAuthenticationType(SipAccountData.AUTH_TYPE_DIGEST)
-                setRealm(server) // Use the server as the realm
-                setRegExpirationTimeout(300) // Set registration expiration (e.g., 300 seconds)
-            }
-
-            try {
-                val sipAccountData = mAccount!!
-                mAccountId = SipServiceCommand.setAccount(this, sipAccountData)
-                Log.d(TAG, "Auto-login initiated with account ID: $mAccountId")
-                Log.d(
-                    TAG,
-                    "**** Account Info: ${sipAccountData.getRegistrarUri()}, ${sipAccountData.getAuthCredInfo()}, ${sipAccountData.username}, ${sipAccountData.password}\n" +
-                            "**** SIP URI: ${sipAccountData.getIdUri()}\n" +
-                            "**** Proxy URI: ${sipAccountData.getProxyUri()}"
-                )
-                isRegistrationComplete = true
-
-            } catch (e: Exception) {
-                Log.e(TAG, "Auto-login failed: ${e.message}")
-                Toast.makeText(this, "Auto-login failed: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        } else {
-            Log.d(TAG, "Auto-login failed: Missing credentials")
-            Toast.makeText(this, "Auto-login failed: Missing credentials", Toast.LENGTH_SHORT)
-                .show()
-        }
-        Log.d(TAG, "Auto-login completed. Registration = $isRegistrationComplete")
+        networkManager.onPause()
     }
 
     override fun onStart() {
         super.onStart()
-        Log.d(TAG, "onStart() called")
-        // Register the BroadcastReceiver to listen for custom broadcasts
-        val intentFilter =
-            IntentFilter(BroadcastEventEmitter.getAction(BroadcastEventEmitter.BroadcastAction.REGISTRATION))
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-//            Log.d(
-//                TAG,
-//                "Android version TIRAMISU or higher, registering with ContextCompat.RECEIVER_EXPORTED...(For other app and system to receive broadcast)"
-//            )
-//            mReceiver.register(this, ContextCompat.RECEIVER_EXPORTED)
-//        } else {
-//            Log.d(
-//                TAG,
-//                "Android version below TIRAMISU, registering without ContextCompat.RECEIVER_EXPORTED..."
-//            )
-//            mReceiver.register(this)
-//        }
-
+        broadcastManager.onStart()
     }
 
     override fun onStop() {
         super.onStop()
-        // Unregister the BroadcastReceiver to avoid memory leaks
-//        unregisterReceiver(mReceiver)
-        Log.d(TAG, "onStop() called")
+        broadcastManager.onStop()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        // Unregister the broadcast receivers
-        unregisterReceiver(systemBroadcastReceiver)
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(localBroadcastReceiver)
-        connectivityManager.unregisterNetworkCallback(networkCallback)
-    }
-
-    companion object {
-        private const val TAG = "MainActivity"
-        private const val PERMISSION_REQUEST_READ_PHONE_STATE = 1
-        private val REQUIRED_PERMISSIONS = arrayOf(
-            Manifest.permission.USE_SIP,
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.WAKE_LOCK,
-            Manifest.permission.INTERNET,
-            Manifest.permission.ACCESS_NETWORK_STATE,
-            Manifest.permission.CAMERA,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.MODIFY_AUDIO_SETTINGS
-        )
+        broadcastManager.onDestroy()
+        networkManager.onDestroy()
     }
 }

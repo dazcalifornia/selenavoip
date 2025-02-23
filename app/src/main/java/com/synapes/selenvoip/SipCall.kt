@@ -465,6 +465,7 @@ class SipCall : Call {
             val callSetting: CallSetting = prm.getOpt()
             callSetting.flag = pjsua_call_flag.PJSUA_CALL_INCLUDE_DISABLED_MEDIA.toLong()
         }
+        Log.i("burb - Lingo", "dst: ${dst_uri}, prm:${prm}")
         super.makeCall(dst_uri, prm)
     }
 

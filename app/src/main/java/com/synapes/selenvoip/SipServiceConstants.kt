@@ -66,7 +66,7 @@ interface SipServiceConstants {
          * Specific Parameters passed in the broadcast intents.
          */
         const val PARAM_REGISTRATION_CODE: String = "registrationCode"
-        const val PARAM_REMOTE_URI: String = "remoteUri"
+        const val PARAM_REMOTE_URI: String = "synapes-pbx-poc-01.online"
         const val PARAM_DISPLAY_NAME: String = "displayName"
         const val PARAM_CALL_STATE: String = "callState"
         const val PARAM_CALL_STATUS: String = "callStatus"

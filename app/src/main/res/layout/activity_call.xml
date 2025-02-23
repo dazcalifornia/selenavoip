@@ -12,7 +12,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:padding="@dimen/activity_horizontal_margin"
-        android:visibility="gone"
+        android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -63,7 +63,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:padding="@dimen/activity_horizontal_margin"
-        android:visibility="gone"
+        android:visibility="visible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -73,10 +73,12 @@
             android:id="@+id/tvOutCallInfo"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginTop="36dp"
             android:gravity="center_horizontal"
             android:text="@string/call_out"
             android:textAppearance="?android:attr/textAppearanceLarge"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -84,9 +86,10 @@
             android:id="@+id/btnCancel"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="50dp"
+            android:layout_marginTop="540dp"
             android:text="@string/cancel_call"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvOutCallInfo" />
     </androidx.constraintlayout.widget.ConstraintLayout>
@@ -95,7 +98,7 @@
         android:id="@+id/layoutConnected"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:visibility="visible"
+        android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -135,9 +138,9 @@
                 android:layout_height="70dp"
                 android:layout_marginLeft="20dp"
                 android:layout_marginRight="20dp"
+                android:contentDescription="@string/mute_microphone"
                 android:scaleType="centerInside"
-                android:src="@drawable/mute"
-                android:contentDescription="@string/mute_microphone" />
+                android:src="@drawable/mute" />
 
             <ImageButton
                 android:id="@+id/btnHangUp"
@@ -145,11 +148,11 @@
                 android:layout_height="50dp"
                 android:layout_marginLeft="20dp"
                 android:layout_marginRight="20dp"
+                android:contentDescription="@string/hang_up"
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/hangup"
-                android:contentDescription="@string/hang_up" />
+                android:src="@drawable/hangup" />
 
             <ImageButton
                 android:id="@+id/btnSwitchCamera"

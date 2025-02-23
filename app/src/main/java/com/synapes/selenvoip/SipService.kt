@@ -1,9 +1,10 @@
 package com.synapes.selenvoip
 
 import android.content.Intent
+import android.media.AudioAttributes
 import android.net.Uri
 import org.pjsip.pjsua2.AudDevManager
-
+import org.pjsip.pjsua2.*
 import android.os.IBinder
 import android.util.Log
 import android.view.Surface
@@ -73,6 +74,8 @@ open class SipService : SelenBackgroundService() {
             if (action == null) return@Runnable
 
             Log.d(TAG, "Starting SipService with action: $action")
+            Log.d("burb", "onStartCommand received action: $action")
+
             when (action) {
                 SipServiceConstants.Companion.ACTION_SET_ACCOUNT -> handleSetAccount(intent)
                 SipServiceConstants.Companion.ACTION_REMOVE_ACCOUNT -> handleRemoveAccount(intent)
@@ -211,50 +214,60 @@ open class SipService : SelenBackgroundService() {
             val epConfig: EpConfig = EpConfig()
             epConfig.getUaConfig().userAgent = AGENT_NAME
             epConfig.getMedConfig().hasIoqueue = true
-            epConfig.getMedConfig().clockRate = 16000
-            epConfig.getMedConfig().quality = 10
-            epConfig.getMedConfig().ecOptions = 1
-            epConfig.getMedConfig().ecTailLen = 200
-            epConfig.getMedConfig().threadCnt = 2
+
+            // ✅ Fix: Use 8000 Hz clock rate for better compatibility
+            epConfig.getMedConfig().apply {
+                clockRate = 16000  // Support wider range
+                quality = 8        // Balanced quality
+                ecOptions = 1
+                ecTailLen = 200
+                threadCnt = 2
+                hasIoqueue = true
+            }
             SipServiceUtils.setSipLogger(epConfig)
             mEndpoint?.libInit(epConfig)
 
             val udpTransport: TransportConfig = TransportConfig()
-            udpTransport.qosType = pj_qos_type.PJ_QOS_TYPE_VOICE
             val tcpTransport: TransportConfig = TransportConfig()
-            tcpTransport.qosType = pj_qos_type.PJ_QOS_TYPE_VOICE
             val tlsTransport: TransportConfig = TransportConfig()
-            tlsTransport.qosType = pj_qos_type.PJ_QOS_TYPE_VOICE
-            // disable tls
-//            SipTlsUtils.setTlsConfig(
-//                this,
-//                mSharedPreferencesHelper!!.isVerifySipServerCert(),
-//                tlsTransport
-//            )
+
+            // ✅ Fix: Try removing QoS settings
+            // udpTransport.qosType = pj_qos_type.PJ_QOS_TYPE_VOICE
+            // tcpTransport.qosType = pj_qos_type.PJ_QOS_TYPE_VOICE
+            // tlsTransport.qosType = pj_qos_type.PJ_QOS_TYPE_VOICE
 
             mEndpoint?.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_UDP, udpTransport)
-            mEndpoint?.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_TCP, tcpTransport)
-            // disable tls
-//            mEndpoint?.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_TLS, tlsTransport)
+            // mEndpoint?.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_TCP, tcpTransport)
+
+            // ✅ Fix: Enable TLS if the SIP server requires it
+            // mEndpoint?.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_TLS, tlsTransport)
+
             mEndpoint?.libStart()
 
+            // ✅ Fix: Ensure codec priorities are set
             val codecPriorities = getConfiguredCodecPriorities()
-            // FIXME: reading from shared pref which is null now
-            Log.d(TAG, "codecPriorities: $codecPriorities")
+            Log.d(TAG, "Configured Codec Priorities: $codecPriorities")
 
-//            SipServiceUtils.setAudioCodecPriorities(codecPriorities, mEndpoint!!)
-
-//            SipServiceUtils.setVideoCodecPriorities(mEndpoint!!)
+            if (codecPriorities != null) {
+                if (codecPriorities.isNotEmpty()) {
+                    SipServiceUtils.setAudioCodecPriorities(codecPriorities, mEndpoint!!)
+                    SipServiceUtils.setVideoCodecPriorities(mEndpoint!!)
+                } else {
+                    Log.e(TAG, "No codec priorities found! This might cause call failures.")
+                }
+            }
 
             Log.d(TAG, "PJSIP started!")
+            Log.d("burb", "PJSIP Stack Started: $mStarted")
+
             mStarted = true
             mBroadcastEmitter?.stackStatus(true)
 
         } catch (e: Exception) {
             Log.e(TAG, "Error while starting PJSIP", e)
         }
-
     }
+
 
     private fun handleRestartSipStack() {
         Log.d(TAG, "Restarting SIP stack")
@@ -651,56 +664,28 @@ open class SipService : SelenBackgroundService() {
 
     private fun handleSetCodecPriorities(intent: Intent) {
         Log.d(TAG, " ---> handleSetCodecPriorities")
-        val codecPriorities =
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                intent.getParcelableArrayListExtra(
-                    SipServiceConstants.Companion.PARAM_CODEC_PRIORITIES,
-                    CodecPriority::class.java
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                intent.getParcelableArrayListExtra<CodecPriority>(SipServiceConstants.Companion.PARAM_CODEC_PRIORITIES)
+
+        val codecPriorities = listOf(
+            CodecPriority("PCMU/8000", 255),  // Most compatible codec first
+            CodecPriority("PCMA/8000", 254),
+            CodecPriority("opus/48000", 253), // Add Opus support
+            CodecPriority("G722/16000", 252),
+            CodecPriority("iLBC/8000", 251)
+        )
+
+        Log.d(TAG, "🚀 Manually setting codec priorities: $codecPriorities")
+
+        codecPriorities.forEach { codecPriority ->
+            try {
+                mEndpoint?.codecSetPriority(codecPriority.getCodecId(), codecPriority.getPriority().toShort())
+                Log.d(TAG, "✅ Successfully set codec: ${codecPriority.getCodecId()} to priority ${codecPriority.getPriority()}")
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Failed to set codec priority: ${codecPriority.getCodecId()}", e)
             }
-
-        if (codecPriorities == null) {
-            return
-        }
-
-        Log.d(TAG, " ---> handleSetCodecPriorities: codecPriorities not null, starting stack")
-        startStack()
-
-        if (!mStarted) {
-            Log.d(
-                TAG,
-                " ---> handleSetCodecPriorities: mStarted is false... broadcasting status and return"
-            )
-            mBroadcastEmitter?.codecPrioritiesSetStatus(false)
-            return
-        }
-
-        Log.d(TAG, " ---> handleSetCodecPriorities: mStarted is true")
-
-        try {
-            val log = StringBuilder()
-            log.append("Codec priorities successfully set. The priority order is now:\n")
-
-            for (codecPriority in codecPriorities) {
-                Log.d(TAG, " ---> handleSetCodecPriorities: codecPriority: $codecPriority")
-                mEndpoint?.codecSetPriority(
-                    codecPriority.getCodecId(),
-                    codecPriority.getPriority().toShort()
-                )
-                log.append(codecPriority).append(",")
-            }
-
-            persistConfiguredCodecPriorities(codecPriorities)
-            Log.d(TAG, " ---> handleSetCodecPriorities: broadcasting set status to true")
-            mBroadcastEmitter?.codecPrioritiesSetStatus(true)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error while setting codec priorities, broadcasting status - ${e.message}")
-            mBroadcastEmitter?.codecPrioritiesSetStatus(false)
         }
     }
+
+
 
     private fun persistConfiguredAccounts() {
         Log.d(TAG, " ----> Persisting configured accounts")
@@ -746,39 +731,226 @@ open class SipService : SelenBackgroundService() {
         return codecPriorities
     }
 
-    private fun handleMakeCall(intent: Intent) {
-        val accountID = intent.getStringExtra(SipServiceConstants.Companion.PARAM_ACCOUNT_ID)
-        val number = intent.getStringExtra(SipServiceConstants.Companion.PARAM_NUMBER)
-        val isVideo = intent.getBooleanExtra(SipServiceConstants.Companion.PARAM_IS_VIDEO, false)
-        var isVideoConference = false
-        var isTransfer = false
-        if (isVideo) {
-            isVideoConference =
-                intent.getBooleanExtra(SipServiceConstants.Companion.PARAM_IS_VIDEO_CONF, false)
-            // do not allow attended transfer on video call for now
-        } else {
-            isTransfer =
-                intent.getBooleanExtra(SipServiceConstants.Companion.PARAM_IS_TRANSFER, false)
-        }
+//    private fun handleMakeCall(intent: Intent) {
+//        val accountID = intent.getStringExtra(SipServiceConstants.Companion.PARAM_ACCOUNT_ID)
+//        val number = intent.getStringExtra(SipServiceConstants.Companion.PARAM_NUMBER)
+//
+//        // Add debug log for incoming number
+//        Log.d(TAG, "Incoming number before formatting: $number")
+//
+//        // Strip any existing sip: prefix if present
+//        val cleanNumber = number?.removePrefix("sip:")?.split("@")?.first() ?: ""
+//
+//        // Always format with full SIP URI
+//        val formattedNumber = "sip:${cleanNumber}@synapes-pbx-poc-01.online"
+//
+//        Log.d(TAG, "Formatted destination number: $formattedNumber")
+//
+//        val isVideo = intent.getBooleanExtra(SipServiceConstants.Companion.PARAM_IS_VIDEO, false)
+//        var isVideoConference = true
+//        var isTransfer = false
+//
+//        if (isVideo) {
+//            isVideoConference = intent.getBooleanExtra(SipServiceConstants.Companion.PARAM_IS_VIDEO_CONF, false)
+//        } else {
+//            isTransfer = intent.getBooleanExtra(SipServiceConstants.Companion.PARAM_IS_TRANSFER, false)
+//        }
+//
+//        Log.d("burb", "Available accounts: ${mActiveSipAccounts.keys}")
+//
+//
+//        try {
+//            if (!mActiveSipAccounts.containsKey(accountID)) {
+//                Log.e(TAG, "Account $accountID not found in active accounts")
+//                mBroadcastEmitter?.outgoingCall(accountID, -1, formattedNumber, false, false, false)
+//                return
+//            }
+//
+//            Log.d("burb", "handleMakeCall: Making a call to $number")
+//
+//
+//            val call = mActiveSipAccounts[accountID]!!.addOutgoingCall(formattedNumber, isVideo, isVideoConference, isTransfer)
+//            call!!.setVideoParams(isVideo, isVideoConference)
+//
+//            Log.d(TAG, """
+//            Call Details:
+//            - Account ID: $accountID
+//            - Call ID: ${call.id}
+//            - Destination: $formattedNumber
+//            - Video: $isVideo
+//            - Video Conference: $isVideoConference
+//            - Transfer: $isTransfer
+//        """.trimIndent())
+//
+//            mBroadcastEmitter?.outgoingCall(
+//                accountID,
+//                call.id,
+//                formattedNumber,
+//                isVideo,
+//                isVideoConference,
+//                isTransfer
+//            )
+//        } catch (exc: Exception) {
+//            Log.e(TAG, "Error while making outgoing call", exc)
+//            Log.e(TAG, "Exception details: ${exc.message}")
+//            Log.e(TAG, "Stack trace: ${exc.stackTrace.joinToString("\n")}")
+//            mBroadcastEmitter?.outgoingCall(accountID, -1, formattedNumber, false, false, false)
+//        }
+//    }
 
-        Log.d(TAG, "Making call to extension# $number")
+    private fun handleMakeCall(intent: Intent) {
+        val accountID = intent.getStringExtra(SipServiceConstants.PARAM_ACCOUNT_ID)
+        val number = intent.getStringExtra(SipServiceConstants.PARAM_NUMBER)
+
+        Log.d(TAG, "Incoming number before formatting: $number")
+
+        // Format the number as before
+        val cleanNumber = number?.removePrefix("sip:")?.split("@")?.first() ?: ""
+        val formattedNumber = "sip:${cleanNumber}@synapes-pbx-poc-01.online"
+
+        Log.d(TAG, "cleanNumber destination number: $cleanNumber")
+        Log.d(TAG, "Formatted destination number: $formattedNumber")
+
+        val isVideo = intent.getBooleanExtra(SipServiceConstants.PARAM_IS_VIDEO, false)
+        val isVideoConference = if (isVideo) {
+            Log.i(TAG, "VIDEO")
+            intent.getBooleanExtra(SipServiceConstants.PARAM_IS_VIDEO_CONF, false)
+        } else false
+        val isTransfer = if (!isVideo) {
+            Log.i(TAG, "Not video")
+            intent.getBooleanExtra(SipServiceConstants.PARAM_IS_TRANSFER, false)
+        } else false
 
         try {
-            val call = mActiveSipAccounts[accountID]!!
-                .addOutgoingCall(number!!, isVideo, isVideoConference, isTransfer)
-            call!!.setVideoParams(isVideo, isVideoConference)
-            mBroadcastEmitter?.outgoingCall(
-                accountID,
-                call.id,
-                number,
-                isVideo,
-                isVideoConference,
-                isTransfer
-            )
+            // Check if account exists
+            if (!mActiveSipAccounts.containsKey(accountID)) {
+                Log.e(TAG, "Account $accountID not found in active accounts")
+                mBroadcastEmitter?.outgoingCall(accountID, -1, formattedNumber, false, false, false)
+                return
+            }
+
+
+            val account = mActiveSipAccounts[accountID]!!
+            Log.d(TAG,"account:${account}")
+
+            // Add to your call setup
+            val audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build()
+
+            // Create direct PJSIP call
+            val call = createPJSIPCall(account, formattedNumber, isVideo, isVideoConference)
+
+            if (call != null) {
+                Log.d(TAG,"Call is not null ")
+                // Store call in your existing management system
+//                account.addOutgoingCall(formattedNumber, isVideo, isVideoConference, isTransfer)
+
+                // Set video parameters if needed
+                call.setVideoParams(isVideo, isVideoConference)
+
+                // Broadcast the outgoing call event
+                mBroadcastEmitter?.outgoingCall(
+                    accountID,
+                    call.id,
+                    formattedNumber,
+                    isVideo,
+                    isVideoConference,
+                    isTransfer
+                )
+
+                // Start CallActivity
+                if (accountID != null) {
+                    startCallActivity(accountID, call.id, formattedNumber, isVideo, isVideoConference)
+                }
+            } else {
+                throw Exception("Failed to create PJSIP call")
+            }
+
         } catch (exc: Exception) {
             Log.e(TAG, "Error while making outgoing call", exc)
-            mBroadcastEmitter?.outgoingCall(accountID, -1, number, false, false, false)
+            Log.e(TAG, "Exception details: ${exc.message}")
+            Log.e(TAG, "Stack trace: ${exc.stackTrace.joinToString("\n")}")
+            mBroadcastEmitter?.outgoingCall(accountID, -1, formattedNumber, false, false, false)
         }
+    }
+
+    // New function to create PJSIP call
+    private fun createPJSIPCall(
+        account: SipAccount,
+        destination: String,
+        isVideo: Boolean,
+        isVideoConference: Boolean
+    ): MyCall? {
+        try {
+            // Create new PJSIP call instance
+            Log.i(TAG, "acc: ${account} , dest: ${destination}")
+            val call = MyCall(account, -1)
+
+            // Set up call parameters
+            val callParams = CallOpParam(true)
+
+            Log.d(TAG,"dest: ${destination}, callParams: ${callParams}")
+            // Make the actual PJSIP call
+            call.makeCall(destination, callParams)
+
+            return call
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating PJSIP call", e)
+            return null
+        }
+    }
+
+    // Custom Call class to handle PJSIP call states
+    class MyCall(acc: Account?, callId: Int) : Call(acc, callId) {
+        private var videoParams: Pair<Boolean, Boolean>? = null
+
+        fun setVideoParams(isVideo: Boolean, isVideoConference: Boolean) {
+            videoParams = Pair(isVideo, isVideoConference)
+        }
+
+        override fun onCallState(prm: OnCallStateParam) {
+            try {
+                val callInfo = info
+                when (callInfo.state) {
+                    pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED -> {
+                        Log.i(TAG, "Call disconnected: ${callInfo.lastStatusCode}")
+                        // Handle call disconnection
+                    }
+                    pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED -> {
+                        Log.i(TAG, "Call connected")
+                        // Handle call connection
+                    }
+                    pjsip_inv_state.PJSIP_INV_STATE_EARLY -> {
+                        Log.i(TAG, "Call ringing")
+                        // Handle call ringing state
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in onCallState", e)
+            }
+        }
+    }
+
+    // Helper function to start CallActivity
+    private fun startCallActivity(
+        accountID: String,
+        callID: Int,
+        number: String,
+        isVideo: Boolean,
+        isVideoConference: Boolean
+    ) {
+        val intent = Intent(this, CallActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            putExtra("accountID", accountID)
+            putExtra("callID", callID)
+            putExtra("number", number)
+            putExtra("isVideo", isVideo)
+            putExtra("isVideoConference", isVideoConference)
+            putExtra("type", CallActivity.TYPE_OUT_CALL)
+        }
+        startActivity(intent)
     }
 
     private fun handleMakeDirectCall(intent: Intent) {
